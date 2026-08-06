@@ -61,16 +61,11 @@ const fmtAgo = ts => {
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const $ = id => document.getElementById(id);
 
-/* ---------------- theme ---------------- */
-$('themebtn').addEventListener('click', () => {
-  const cur = document.documentElement.getAttribute('data-theme');
-  const dark = cur ? cur === 'dark'
-    : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const next = dark ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  try { localStorage.setItem('theme', next); } catch (e) {}
-  renderCharts(); // charts read CSS vars indirectly via classes; safe either way
-});
+/* ---------------- cam clock ---------------- */
+setInterval(() => {
+  const el = $('camclock');
+  if (el) el.textContent = fmtT(Math.floor(Date.now() / 1000)) + ' UTC';
+}, 1000);
 
 /* ---------------- candle price lookup ---------------- */
 function priceAt(ts) {
@@ -724,8 +719,12 @@ async function boot() {
   setInterval(() => { $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at); }, 30000);
   let rt;
   window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderCharts, 200); });
+
+  const bt = $('boot');
+  if (bt) { bt.style.opacity = '0'; setTimeout(() => bt.remove(), 350); }
 }
 boot().catch(e => {
-  document.querySelector('.hero p').textContent = 'Failed to load data — refresh the page to retry.';
+  const bb = document.querySelector('#boot .bootbox');
+  if (bb) bb.innerHTML = 'SIGNAL LOST — <a href="javascript:location.reload()">retry</a>';
   console.error(e);
 });

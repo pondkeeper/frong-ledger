@@ -11,13 +11,12 @@
 <meta property="og:image" content="https://pondkeeper.github.io/frong-ledger/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
+<meta name="theme-color" content="#070a06">
 <link rel="stylesheet" href="style.css">
-<script>
-/* apply saved theme before first paint to avoid flash */
-try{const t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
-</script>
 </head>
 <body>
+
+<div id="boot" aria-hidden="true"><div class="bootbox"><span class="rec"></span>INITIALIZING POND CAM…</div></div>
 
 <div class="sitehead">
   <div class="inner">
@@ -31,18 +30,29 @@ try{const t=localStorage.getItem('theme');if(t)document.documentElement.setAttri
       <a href="#flywheel">Flywheel</a>
       <a href="#tape">Tape</a>
     </nav>
-    <button id="themebtn" aria-label="Toggle color theme">◐</button>
   </div>
 </div>
 
 <div class="wrap">
-  <div class="hero">
-    <h1>Every whale. Every trade. Verified.</h1>
-    <p>The top 50 FRONG wallets on Robinhood Chain with real cost basis and PnL,
-      rebuilt from every on-chain transfer and reconciled against on-chain balances
-      each run — plus a live trade tape, whale-vs-retail flow, and the locked-liquidity
-      flywheel. Data refreshes every 10 minutes; price is live.
-      <a href="methodology.html">How the numbers are made →</a></p>
+  <div class="cam-hero">
+    <div class="hero-copy">
+      <h1>Frong <span class="dim">Ledger</span></h1>
+      <p class="tagline">EVERY WHALE · EVERY TRADE · VERIFIED</p>
+      <p>A camera pointed at the pond: the 50 biggest FRONG wallets on Robinhood
+        Chain — what they hold, what they actually paid, and what they're doing
+        right now. Rebuilt from every on-chain transfer, reconciled against on-chain
+        balances, refreshed every 10 minutes with a live price feed on top.
+        <a href="methodology.html">How the numbers are made →</a></p>
+    </div>
+    <div class="camframe" aria-hidden="true">
+      <img src="assets/frong-cam.png" alt="">
+      <span class="bracket b1"></span><span class="bracket b2"></span>
+      <span class="bracket b3"></span><span class="bracket b4"></span>
+      <span class="hud tl"><span class="rec"></span>REC</span>
+      <span class="hud tr">POND CAM 01</span>
+      <span class="hud bl" id="camclock">--:--:-- UTC</span>
+      <span class="hud br">TARGET: WHALES</span>
+    </div>
   </div>
 
   <div class="stats" id="stats" aria-label="Market stats"></div>
@@ -117,9 +127,9 @@ try{const t=localStorage.getItem('theme');if(t)document.documentElement.setAttri
             <th class="l">Wallet</th>
             <th><button data-sort="balance">Balance <span class="arr"></span></button></th>
             <th><button data-sort="value_usd">Value <span class="arr"></span></button></th>
-            <th><button data-sort="avg_entry">Avg entry <span class="arr"></span></button></th>
-            <th><button data-sort="unrealized">Unrealized PnL <span class="arr"></span></button></th>
-            <th><button data-sort="realized">Realized <span class="arr"></span></button></th>
+            <th title="Weighted-average price this wallet paid across all its buys"><button data-sort="avg_entry">Avg entry <span class="arr"></span></button></th>
+            <th title="What the wallet is up or down on coins it still holds, at the live price"><button data-sort="unrealized">Unrealized PnL <span class="arr"></span></button></th>
+            <th title="Profit or loss already locked in by selling"><button data-sort="realized">Realized <span class="arr"></span></button></th>
             <th><button data-sort="first_ts">First entry <span class="arr"></span></button></th>
             <th></th>
           </tr>
