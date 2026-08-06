@@ -3,3 +3,4 @@ __pycache__/
 .local_cron.log
 .local_cron_err.log
 .surge_build/
+.surge_deployed
