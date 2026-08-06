@@ -67,23 +67,37 @@ nav.sections{display:flex;gap:14px;font-family:'Plex Mono',monospace;font-size:1
 nav.sections a{color:var(--ink-2)}
 nav.sections a:hover{color:var(--accent);text-decoration:none}
 
-/* ---------- hero: the pond cam ---------- */
-.cam-hero{display:grid;grid-template-columns:1.15fr .85fr;gap:34px;align-items:center;
-  margin:10px 0 26px}
-@media (max-width:820px){.cam-hero{grid-template-columns:1fr}}
-.hero-copy h1{font-family:'Plex Mono',monospace;font-weight:600;margin:0 0 10px;
-  font-size:clamp(26px,4.6vw,40px);letter-spacing:.06em;text-transform:uppercase;
-  text-wrap:balance;text-shadow:var(--glow)}
-.hero-copy h1 .dim{color:var(--accent)}
-.hero-copy .tagline{font-family:'Plex Mono',monospace;font-size:14px;letter-spacing:.06em;
-  color:var(--ink-2);margin:0 0 14px}
-.hero-copy p{color:var(--ink-2);max-width:56ch;margin:0;font-size:14.5px}
-.camframe{position:relative;border:1px solid var(--baseline);border-radius:4px;
-  overflow:hidden;background:#000;box-shadow:var(--shadow);aspect-ratio:16/9}
-.camframe img,.camframe video{width:100%;height:100%;object-fit:cover;display:block;
-  filter:contrast(1.03) brightness(1.02)}
-.camframe::after{content:"";position:absolute;inset:0;
+/* ---------- hero: full-bleed pond cam feed ---------- */
+.cam-hero-full{position:relative;overflow:hidden;background:#000;margin:-26px 0 30px;
+  border-bottom:1px solid var(--baseline)}
+.cam-hero-full video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  object-position:30% 50%;filter:contrast(1.03) brightness(1.02)}
+.cam-hero-full::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
   background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.16) 2px 3px)}
+.hero-shade{position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(7,10,6,.45) 0%,transparent 28%,transparent 44%,
+    rgba(7,10,6,.86) 78%,var(--page) 100%)}
+.cam-hero-full .hud,.cam-hero-full .bracket{z-index:4}
+.hero-overlay{position:relative;z-index:3;max-width:1100px;margin:0 auto;
+  padding:clamp(220px,40vh,440px) 20px 0}
+.hero-overlay h1{font-family:'Plex Mono',monospace;font-weight:600;margin:0 0 8px;
+  font-size:clamp(34px,6vw,58px);letter-spacing:.06em;text-transform:uppercase;
+  line-height:1.05;text-shadow:var(--glow),0 2px 18px rgba(0,0,0,.85)}
+.hero-overlay h1 .dim{color:var(--accent)}
+.hero-overlay .tagline{font-family:'Plex Mono',monospace;font-size:clamp(11px,1.6vw,14px);
+  letter-spacing:.14em;color:var(--ink-2);margin:0;text-shadow:0 1px 8px rgba(0,0,0,.9)}
+.hero-overlay .tagline .method{margin-left:14px;color:var(--accent)}
+.hudstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px 22px;
+  border-top:1px solid rgba(214,228,200,.22);margin-top:20px;padding:14px 0 20px}
+.hudstats .tile{background:none;border:0;border-radius:0;padding:0}
+.hudstats .tile .val{text-shadow:0 0 8px rgba(168,224,90,.25),0 1px 10px rgba(0,0,0,.9)}
+.hudstats .tile:first-child .val{text-shadow:var(--glow),0 1px 10px rgba(0,0,0,.9)}
+@media (max-width:640px){
+  .hud-verbose{display:none}
+  .hudstats{grid-template-columns:1fr 1fr;gap:10px 16px}
+  .hudstats .tile .lbl{letter-spacing:.08em}
+  .hudstats .tile .val{font-size:17px}
+}
 .hud{position:absolute;z-index:3;font-family:'Plex Mono',monospace;font-size:10.5px;
   letter-spacing:.14em;color:#dcead0;text-shadow:0 0 6px rgba(0,0,0,.9);
   padding:8px 10px;display:flex;align-items:center;gap:6px}

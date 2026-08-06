@@ -33,29 +33,23 @@
   </div>
 </div>
 
-<div class="wrap">
-  <div class="cam-hero">
-    <div class="hero-copy">
-      <h1>Frong <span class="dim">Ledger</span></h1>
-      <p class="tagline">EVERY WHALE · EVERY TRADE · VERIFIED</p>
-      <p>A camera pointed at the pond: the 50 biggest FRONG wallets on Robinhood
-        Chain — what they hold, what they actually paid, and what they're doing
-        right now. Rebuilt from every on-chain transfer, reconciled against on-chain
-        balances, refreshed every 10 minutes with a live price feed on top.
-        <a href="methodology.html">How the numbers are made →</a></p>
-    </div>
-    <div class="camframe" aria-hidden="true">
-      <video id="camvid" src="assets/frong-cam.mp4" poster="assets/frong-cam.jpg"
-             autoplay muted loop playsinline disablepictureinpicture></video>
-      <span class="bracket b1"></span><span class="bracket b2"></span>
-      <span class="bracket b3"></span><span class="bracket b4"></span>
-      <span class="hud tl"><span class="rec"></span>REC</span>
-      <span class="hud tr">POND CAM 01 · TARGET: WHALES</span>
-    </div>
+<section class="cam-hero-full">
+  <video id="camvid" src="assets/frong-cam.mp4" poster="assets/frong-cam.jpg"
+         autoplay muted loop playsinline disablepictureinpicture></video>
+  <div class="hero-shade" aria-hidden="true"></div>
+  <span class="bracket b1"></span><span class="bracket b2"></span>
+  <span class="bracket b3"></span><span class="bracket b4"></span>
+  <span class="hud tl"><span class="rec"></span>REC</span>
+  <span class="hud tr"><span class="hud-verbose">POND CAM 01 · TARGET: WHALES · </span><span id="hudclock">--:--:--</span> UTC</span>
+  <div class="hero-overlay">
+    <h1>Frong <span class="dim">Ledger</span></h1>
+    <p class="tagline">EVERY WHALE · EVERY TRADE · VERIFIED
+      <a class="method" href="methodology.html">HOW →</a></p>
+    <div class="hudstats" id="stats" aria-label="Market stats"></div>
   </div>
+</section>
 
-  <div class="stats" id="stats" aria-label="Market stats"></div>
-
+<div class="wrap">
   <div class="card">
     <div class="cardhead">
       <div><h2>Price since launch</h2>

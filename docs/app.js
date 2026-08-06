@@ -67,6 +67,11 @@ const $ = id => document.getElementById(id);
   if (v && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     v.removeAttribute('autoplay'); v.pause();
   }
+  const hc = $('hudclock');
+  if (hc) {
+    const tick = () => { hc.textContent = fmtT(Math.floor(Date.now() / 1000)); };
+    tick(); setInterval(tick, 1000);
+  }
 }
 
 /* ---------------- candle price lookup ---------------- */
@@ -291,8 +296,8 @@ function renderStats() {
   $('stats').innerHTML = [
     ['Price · live', fmtPx(px) + (chg != null ? `<span class="delta ${chg >= 0 ? 'up' : 'dn'}">${chg >= 0 ? '+' : ''}${chg.toFixed(1)}% 24h</span>` : '')],
     ['FDV', fmtUsd(px * SUPPLY)],
-    ['Main-pool liquidity', fmtUsd(ls.liq ?? t.liq_main)],
-    ['24h volume · all pools', fmtUsd(ls.vol24 ?? t.vol24_all)],
+    ['Liquidity · main pool', fmtUsd(ls.liq ?? t.liq_main)],
+    ['24h volume', fmtUsd(ls.vol24 ?? t.vol24_all)],
     ['Holders', (ls.holders ?? t.holders_count).toLocaleString('en-US')],
   ].map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="val">${v}</div></div>`).join('');
   $('liveprice').textContent = 'FRONG ' + fmtPx(px);
