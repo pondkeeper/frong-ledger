@@ -278,6 +278,92 @@ harvests += new_h
 locked_frong = sum(h["frong"] for h in harvests)
 print(f"harvests: +{len(new_h)} new, total {len(harvests)} | cumulative {locked_frong/1e6:.1f}M FRONG recycled")
 
+# ---------------- derived intelligence ----------------
+# Everything below is additive: the frontend can ignore it safely.
+LAUNCH_TS = (candles1h or candles5 or [[now, 0]])[0][0]
+COHORTS = [
+    ("sniper",     "First 10 minutes",  0,        600),
+    ("day_one",    "First 24 hours",    600,      86400),
+    ("early",      "Day 2–3",           86400,    3 * 86400),
+    ("latecomer",  "After day 3",       3 * 86400, 10 ** 9),
+]
+
+def cohort_of(w):
+    if not w.get("first_ts"):
+        return None
+    age = w["first_ts"] - LAUNCH_TS
+    for key, _lbl, lo, hi in COHORTS:
+        if lo <= age < hi:
+            return key
+    return None
+
+top_set = [w for w in wallets_out if w["in_top"]]
+for w in wallets_out:
+    w["cohort"] = cohort_of(w)
+    bought = sum(t["amount"] for t in w["txs"] if t["to"].lower() == w["addr"].lower())
+    w["ever_bought"] = bought
+    w["held_pct"] = min(100.0, w["balance"] / bought * 100) if bought > 0 else None
+
+cohort_stats = []
+for key, label, _lo, _hi in COHORTS:
+    members = [w for w in top_set if w["cohort"] == key]
+    if not members:
+        continue
+    bal = sum(w["balance"] for w in members)
+    bought = sum(w["ever_bought"] for w in members)
+    entries = [w["avg_entry"] for w in members if w["avg_entry"]]
+    cohort_stats.append({
+        "key": key, "label": label, "n": len(members),
+        "balance": bal, "pct_supply": bal / SUPPLY * 100,
+        "value_usd": bal * cur_price,
+        "avg_entry": (sum(entries) / len(entries)) if entries else None,
+        "unrealized": sum(w["unrealized"] or 0 for w in members),
+        "realized": sum(w["realized"] for w in members),
+        "held_pct": (bal / bought * 100) if bought > 0 else None,
+        "in_profit": sum(1 for w in members if (w["unrealized"] or 0) > 0),
+    })
+
+# net flow per tracked wallet over trailing windows
+def net_flow(w, since):
+    net = 0.0
+    for t in w["txs"]:
+        if t["ts"] < since:
+            continue
+        net += t["amount"] if t["to"].lower() == w["addr"].lower() else -t["amount"]
+    return net
+
+movers = []
+for w in top_set:
+    n24 = net_flow(w, now - 86400)
+    if abs(n24) * cur_price >= 200:      # ignore dust
+        movers.append({"addr": w["addr"], "net24": n24, "usd24": n24 * cur_price,
+                       "balance": w["balance"], "cohort": w["cohort"]})
+movers.sort(key=lambda m: -abs(m["net24"]))
+movers = movers[:12]
+
+# concentration + churn vs the previous run
+prev_top = {a for a, w in tracked.items() if w.get("in_top")}
+cur_top = {w["addr"].lower() for w in top_set}
+by_bal = sorted(top_set, key=lambda w: -w["balance"])
+concentration = {
+    "top1": (by_bal[0]["balance"] / SUPPLY * 100) if by_bal else 0,
+    "top10": sum(w["balance"] for w in by_bal[:10]) / SUPPLY * 100,
+    "top50": sum(w["balance"] for w in by_bal) / SUPPLY * 100,
+    "entered": sorted(cur_top - prev_top) if prev_top else [],
+    "exited": sorted(prev_top - cur_top) if prev_top else [],
+}
+
+stats_block = {
+    "launch_ts": LAUNCH_TS,
+    "cohorts": cohort_stats,
+    "movers": movers,
+    "concentration": concentration,
+    "whale_net24": sum(m["net24"] for m in movers),
+    "locked_frong": locked_frong,
+}
+print(f"intel: {len(cohort_stats)} cohorts | {len(movers)} movers | top10 {concentration['top10']:.1f}% "
+      f"| +{len(concentration['entered'])}/-{len(concentration['exited'])} top-50 churn")
+
 # ---------------- write ----------------
 wallets_out.sort(key=lambda w: -w["balance"])
 out = {
@@ -291,18 +377,20 @@ out = {
     "candles5": candles5,
     "candles1h": candles1h,
     "harvests": harvests,
+    "stats": stats_block,
 }
 os.makedirs(os.path.dirname(DATA), exist_ok=True)
 with open(DATA, "w") as f:
     json.dump(out, f)
 
-top_set = [w for w in wallets_out if w["in_top"]]
 snap = {
     "ts": now, "price": cur_price, "holders": holders_count,
     "liq": liq, "fdv": fdv,
     "whale_balance": sum(w["balance"] for w in top_set),
     "whale_unrealized": sum(w["unrealized"] or 0 for w in top_set),
     "in_profit": sum(1 for w in top_set if (w["unrealized"] or 0) > 0),
+    "top10": concentration["top10"],
+    "locked_frong": locked_frong,
 }
 with open(SNAPS, "a") as f:
     f.write(json.dumps(snap) + "\n")

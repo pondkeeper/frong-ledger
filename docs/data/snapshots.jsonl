@@ -21,3 +21,4 @@
 {"ts": 1786057296, "price": 0.007329, "holders": 12202, "liq": 608644.17, "fdv": 7329101, "whale_balance": 250008260.14133266, "whale_unrealized": 291495.64789885556, "in_profit": 28}
 {"ts": 1786057418, "price": 0.007354, "holders": 12197, "liq": 609620.73, "fdv": 7354674, "whale_balance": 250643161.29636753, "whale_unrealized": 297403.82374063885, "in_profit": 28}
 {"ts": 1786057608, "price": 0.007388, "holders": 12234, "liq": 611231.6, "fdv": 7388462, "whale_balance": 250643161.29636753, "whale_unrealized": 305925.69122471503, "in_profit": 28}
+{"ts": 1786058730, "price": 0.007058, "holders": 12220, "liq": 596207.25, "fdv": 7058214, "whale_balance": 250916611.47950435, "whale_unrealized": 223273.36888388204, "in_profit": 25, "top10": 10.429610542099583, "locked_frong": 22988964.861523498}
