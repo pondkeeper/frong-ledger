@@ -69,12 +69,6 @@ const $ = id => document.getElementById(id);
   }
 }
 
-/* ---------------- cam clock ---------------- */
-setInterval(() => {
-  const el = $('camclock');
-  if (el) el.textContent = fmtT(Math.floor(Date.now() / 1000)) + ' UTC';
-}, 1000);
-
 /* ---------------- candle price lookup ---------------- */
 function priceAt(ts) {
   const c = S.candles, cts = S.cts;

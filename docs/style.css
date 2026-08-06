@@ -79,7 +79,7 @@ nav.sections a:hover{color:var(--accent);text-decoration:none}
   color:var(--ink-2);margin:0 0 14px}
 .hero-copy p{color:var(--ink-2);max-width:56ch;margin:0;font-size:14.5px}
 .camframe{position:relative;border:1px solid var(--baseline);border-radius:4px;
-  overflow:hidden;background:#000;box-shadow:var(--shadow);aspect-ratio:6/5;max-height:340px}
+  overflow:hidden;background:#000;box-shadow:var(--shadow);aspect-ratio:16/9}
 .camframe img,.camframe video{width:100%;height:100%;object-fit:cover;display:block;
   filter:contrast(1.03) brightness(1.02)}
 .camframe::after{content:"";position:absolute;inset:0;
