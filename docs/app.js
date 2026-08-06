@@ -1,7 +1,7 @@
 'use strict';
 /* Frong Ledger frontend.
  * Baseline data comes from data/data.json (cron, ~10 min).
- * Live layer (price, tape) fetches client-side from public APIs.
+ * Live layer (price) fetches client-side from public APIs.
  */
 
 const BS = 'https://robinhoodchain.blockscout.com/api/v2';
@@ -15,8 +15,7 @@ const S = {
   data: null, snaps: [], candles: [], cts: [],
   livePrice: null, liveStats: null, launch: 0,
   byAddr: new Map(), sortKey: 'balance', sortDir: -1,
-  flowHours: 72, tapeFloor: 500, tapeBuf: [], tapeSeen: new Set(),
-  priceFails: 0, mainLog: false,
+  flowHours: 72, priceFails: 0, mainLog: false,
 };
 
 /* ---------------- formatting ---------------- */
@@ -122,9 +121,7 @@ function drawLine(host, opts) {
     const step = niceStep((yMax - Math.min(0, yMin)) / (opts.yTickN || 4));
     for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) yTicks.push(v);
   }
-  const xTicks = [];
-  const span = x1 - x0, dayStep = span > 86400 * 8 ? 2 * 86400 : 86400;
-  for (let d = Math.ceil(x0 / 86400) * 86400; d < x1; d += dayStep) xTicks.push(d);
+  const xTicks = xTickList(x0, x1);
 
   let g = '';
   for (const v of yTicks) {
@@ -133,8 +130,8 @@ function drawLine(host, opts) {
       + `<text class="ticktext" x="${M.l - 8}" y="${y + 3}" text-anchor="end">${yFmt(v)}</text>`;
   }
   if (opts.xTicks !== false)
-    for (const t of xTicks)
-      g += `<text class="ticktext" x="${X(t)}" y="${H - 8}" text-anchor="middle">${fmtD(t)}</text>`;
+    for (const [t, lbl] of xTicks)
+      g += `<text class="ticktext" x="${X(t)}" y="${H - 8}" text-anchor="middle">${lbl}</text>`;
   g += `<line class="axisline" x1="${M.l}" y1="${M.t + ih}" x2="${W - M.r}" y2="${M.t + ih}"/>`;
 
   const cls = opts.lineClass || 'priceline';
@@ -207,7 +204,7 @@ function drawBars(host, opts) {
   const bk = opts.buckets;
   if (!bk || !bk.length) { host.innerHTML = '<p class="cardsub">No activity in this window.</p>'; return; }
   const W = chartW(host), H = opts.height || 200;
-  const M = { t: 10, r: 14, b: 24, l: 56 };
+  const M = { t: 10, r: 14, b: opts.xTicks === false ? 8 : 24, l: 56 };
   const iw = W - M.l - M.r, ih = H - M.t - M.b;
   const x0 = opts.x0 ?? bk[0].ts, x1 = opts.x1 ?? (bk[bk.length - 1].ts + opts.bucketSec);
   const maxAbs = Math.max(...bk.map(b => Math.abs(b.val)), 1e-9) * 1.08;
@@ -225,9 +222,9 @@ function drawBars(host, opts) {
     g += `<line class="gridline" x1="${M.l}" y1="${y}" x2="${W - M.r}" y2="${y}"/>`
       + `<text class="ticktext" x="${M.l - 8}" y="${y + 3}" text-anchor="end">${yFmt(v)}</text>`;
   }
-  const span = x1 - x0, dayStep = span > 86400 * 8 ? 2 * 86400 : 86400;
-  for (let d = Math.ceil(x0 / 86400) * 86400; d < x1; d += dayStep)
-    g += `<text class="ticktext" x="${X(d)}" y="${H - 6}" text-anchor="middle">${fmtD(d)}</text>`;
+  if (opts.xTicks !== false)
+    for (const [t, lbl] of xTickList(x0, x1))
+      g += `<text class="ticktext" x="${X(t)}" y="${H - 6}" text-anchor="middle">${lbl}</text>`;
   g += `<line class="axisline" x1="${M.l}" y1="${Y(0)}" x2="${W - M.r}" y2="${Y(0)}"/>`;
 
   let bars = '';
@@ -255,6 +252,18 @@ function drawBars(host, opts) {
     });
     r.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
   });
+}
+function xTickList(x0, x1) {
+  const span = x1 - x0;
+  const step = span > 86400 * 8 ? 2 * 86400 : span > 86400 * 2.5 ? 86400 : 21600;
+  const out = [];
+  for (let t = Math.ceil(x0 / step) * step; t < x1; t += step) {
+    const d = new Date(t * 1000);
+    out.push([t, step < 86400
+      ? String(d.getUTCHours()).padStart(2, '0') + ':00'
+      : fmtD(t)]);
+  }
+  return out;
 }
 function niceStep(raw) {
   if (!isFinite(raw) || raw <= 0) return 1;
@@ -293,14 +302,16 @@ function renderStats() {
   const t = S.data.token, px = S.livePrice || t.price;
   const ls = S.liveStats || {};
   const chg = ls.chg24 ?? t.chg24;
-  $('stats').innerHTML = [
+  const st = $('stats');
+  if (st) st.innerHTML = [
     ['Price · live', fmtPx(px) + (chg != null ? `<span class="delta ${chg >= 0 ? 'up' : 'dn'}">${chg >= 0 ? '+' : ''}${chg.toFixed(1)}% 24h</span>` : '')],
     ['FDV', fmtUsd(px * SUPPLY)],
     ['Liquidity · main pool', fmtUsd(ls.liq ?? t.liq_main)],
     ['24h volume', fmtUsd(ls.vol24 ?? t.vol24_all)],
     ['Holders', (ls.holders ?? t.holders_count).toLocaleString('en-US')],
   ].map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="val">${v}</div></div>`).join('');
-  $('liveprice').textContent = 'FRONG ' + fmtPx(px);
+  const lp = $('liveprice');
+  if (lp) lp.textContent = 'FRONG ' + fmtPx(px);
 }
 
 function mainChartPoints() {
@@ -308,15 +319,21 @@ function mainChartPoints() {
   if (S.livePrice) pts.push([Math.floor(Date.now() / 1000), S.livePrice]);
   return pts;
 }
-function renderMainChart() {
-  drawLine($('mainchart'), { points: mainChartPoints(), height: 300, log: S.mainLog,
-    label: 'FRONG price since launch' });
-  $('chartmeta').textContent = 'baseline ' + fmtAgo(S.data.generated_at) + ' · live point appended';
-}
 
-function renderFlow() {
+/* The Signal: price + whale net flow + holders on one shared time axis */
+function renderSignal() {
+  if (!$('sigprice')) return;
   const now = Math.floor(Date.now() / 1000);
   const h = S.flowHours, x0 = h ? now - h * 3600 : S.launch, x1 = now;
+
+  const all = mainChartPoints();
+  let pts = all.filter(p => p[0] >= x0 - 1800);
+  if (pts.length < 2) pts = all.slice(-2);
+  drawLine($('sigprice'), { points: pts, height: 240, log: S.mainLog, x0, x1,
+    xTicks: false, zeroBase: false, label: 'FRONG price' });
+  const cm = $('chartmeta');
+  if (cm) cm.textContent = 'Baseline ' + fmtAgo(S.data.generated_at) + ' · live point appended.';
+
   const B = 3600;
   const map = new Map();
   for (const w of S.data.wallets) {
@@ -331,23 +348,28 @@ function renderFlow() {
     }
   }
   const buckets = [...map.values()].sort((a, b) => a.ts - b.ts);
-  drawBars($('flowchart'), { buckets, bucketSec: B, height: 190, x0, x1,
+  drawBars($('sigflow'), { buckets, bucketSec: B, height: 150, x0, x1, xTicks: false,
     label: 'Net whale flow per hour',
     tipFmt: b => `<b>${b.val >= 0 ? '+' : ''}${fmtAmt(b.val)} net</b><br>` +
       `<span class="t2">▲ ${fmtAmt(b.buy)} · ▼ ${fmtAmt(b.sell)}</span><br>` +
       `<span class="t2">${fmtDT(b.ts)} UTC</span>` });
+
   const hs = S.snaps.filter(s => s.ts >= x0).map(s => [s.ts, s.holders]);
-  if (hs.length >= 2)
-    drawLine($('holderchart'), { points: hs, height: 90, zeroBase: false, area: false,
-      lineClass: 'holderline', x0, x1, yTickN: 2, xTicks: false,
+  if (hs.length >= 2) {
+    drawLine($('sigholders'), { points: hs, height: 96, zeroBase: false, area: false,
+      lineClass: 'holderline', x0, x1, yTickN: 2,
       yFmt: v => Math.round(v).toLocaleString('en-US'),
       yTipFmt: v => Math.round(v).toLocaleString('en-US') + ' holders',
       label: 'Holder count' });
-  else $('holderchart').innerHTML =
+    if (hs[0][0] - x0 > (x1 - x0) * 0.25)
+      $('sigholders').insertAdjacentHTML('beforeend',
+        `<div class="signote">tracking since ${fmtDT(hs[0][0])} UTC — fills in over time</div>`);
+  } else $('sigholders').innerHTML =
     '<p class="cardsub">Holder-count trend appears here as snapshots accumulate (one every 10 min).</p>';
 }
 
 function renderAggr() {
+  if (!$('aggr')) return;
   const ws = S.data.wallets.filter(w => w.in_top);
   const bal = ws.reduce((s, w) => s + w.balance, 0);
   const val = ws.reduce((s, w) => s + w._value, 0);
@@ -383,7 +405,32 @@ function rowHTML(w, pos) {
   <tr class="detail" hidden><td colspan="9"></td></tr>`;
 }
 
+function renderPreview() {
+  const host = $('previewbody');
+  if (!host) return;
+  const ws = S.data.wallets.filter(w => w.in_top).slice()
+    .sort((a, b) => b.balance - a.balance).slice(0, 8);
+  host.innerHTML = ws.map((w, i) => {
+    const u = w._unreal, uc = u == null ? '' : (u >= 0 ? 'pnl-pos' : 'pnl-neg');
+    return `<tr class="prow" tabindex="0" role="link" aria-label="Open the full ledger">
+      <td class="l rank">${i + 1}</td>
+      <td class="l"><span class="addr">${short(w.addr)}</span>${badges(w)}</td>
+      <td>${fmtAmt(w.balance)}<span class="subcell">${(w.balance / SUPPLY * 100).toFixed(2)}% supply</span></td>
+      <td>${fmtUsd(w._value)}</td>
+      <td>${fmtPx(w.avg_entry)}</td>
+      <td class="${uc}">${u == null ? '—' : fmtSigned(u)}</td>
+    </tr>`;
+  }).join('');
+  host.querySelectorAll('tr.prow').forEach(tr => {
+    tr.addEventListener('click', () => { location.href = 'ledger.html'; });
+    tr.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') location.href = 'ledger.html';
+    });
+  });
+}
+
 function renderTable() {
+  if (!$('tbody')) return;
   const key = { balance: 'balance', value_usd: '_value', avg_entry: 'avg_entry',
     unrealized: '_unreal', realized: 'realized', first_ts: 'first_ts' }[S.sortKey];
   const ws = S.data.wallets.filter(w => w.in_top).slice();
@@ -465,28 +512,36 @@ function buildPanel(w) {
 }
 
 function renderDiamond() {
+  if (!$('dgrid')) return;
   const px = S.livePrice || S.data.token.price;
   const day1 = S.data.wallets.filter(w => w.in_top && w.first_ts && w.first_ts - S.launch < 86400 && w.avg_entry);
   day1.forEach(w => { w._mult = px / w.avg_entry; });
-  const top = day1.sort((a, b) => b._mult - a._mult).slice(0, 9);
+  const top = day1.sort((a, b) => b._mult - a._mult).slice(0, 6);
   $('dgrid').innerHTML = top.map((w, i) => {
     const bought = w.txs.filter(t => isIn(t, w.addr)).reduce((s, t) => s + t.amount, 0);
     const held = bought > 0 ? Math.min(100, w.balance / bought * 100) : 0;
     const never = w.sell_usd < 1;
-    return `<div class="dcard">
-      <div class="drank">#${i + 1} · entered ${fmtDT(w.first_ts)} UTC</div>
+    const days = Math.max(1, Math.floor((Date.now() / 1000 - w.first_ts) / 86400));
+    return `<div class="dcard${i === 0 ? ' apex' : ''}">
+      <span class="dbr b1"></span><span class="dbr b2"></span>
+      <span class="dbr b3"></span><span class="dbr b4"></span>
+      <div class="dtop"><span class="drank">SPECIMEN ${String(i + 1).padStart(2, '0')}</span>
+        <span class="dsince">in the pond ${days}d</span></div>
       <div class="daddr"><a href="${EXPLORER}/address/${w.addr}" target="_blank" rel="noopener">${short(w.addr)}</a>
-        ${never ? '<span class="badge og">never sold</span>' : ''}</div>
+        ${never ? '<span class="badge og">never sold</span>' : ''}
+        ${i === 0 ? '<span class="badge apexbadge">apex</span>' : ''}</div>
       <div class="dmult">×${w._mult >= 100 ? w._mult.toFixed(0) : w._mult.toFixed(1)}</div>
+      <div class="dsub">entered ${fmtPx(w.avg_entry)} · now ${fmtPx(px)}</div>
       <div class="heldbar"><i style="width:${held.toFixed(0)}%"></i></div>
-      <div class="drow"><span>still holding</span><b>${held.toFixed(0)}%</b></div>
-      <div class="drow"><span>avg entry</span><b>${fmtPx(w.avg_entry)}</b></div>
+      <div class="drow"><span>still holding</span><b>${held.toFixed(0)}% of all buys</b></div>
       <div class="drow"><span>position</span><b>${fmtUsd(w.balance * px)}</b></div>
+      <div class="drow"><span>first entry</span><b>${fmtDT(w.first_ts)} UTC</b></div>
     </div>`;
   }).join('') || '<p class="cardsub">No day-one wallets in the top 50 right now.</p>';
 }
 
 function renderFlywheel() {
+  if (!$('fwtiles')) return;
   const hv = S.data.harvests || [];
   const px = S.livePrice || S.data.token.price;
   const tot = hv.reduce((s, h) => s + h.frong, 0);
@@ -510,18 +565,20 @@ function renderFlywheel() {
 }
 
 function renderInfra() {
+  if (!$('infra')) return;
   $('infra').innerHTML = (S.data.contracts_top || []).map(c => {
     const nm = c.name ? esc(c.name) : short(c.addr);
     return `<span title="${esc(c.addr)}"><a href="${EXPLORER}/address/${c.addr}" target="_blank" rel="noopener">${nm}</a> ${fmtAmt(c.balance)} (${(c.balance / SUPPLY * 100).toFixed(2)}%)</span>`;
   }).join('');
 }
 
-function renderCharts() { renderMainChart(); renderFlow(); renderFlywheel(); }
+function renderCharts() { renderSignal(); renderFlywheel(); }
 
 /* live-price refresh of computed cells without rebuilding the table */
 function refreshLiveCells() {
   S.data.wallets.forEach(liveCalc);
-  renderStats(); renderAggr();
+  renderStats(); renderAggr(); renderPreview();
+  if (!$('tbody')) return;
   $('tbody').querySelectorAll('tr.hrow').forEach(tr => {
     const w = S.data.wallets.find(x => x.addr === tr.dataset.a);
     if (!w) return;
@@ -546,62 +603,10 @@ async function pollPrice() {
       vol24: d.pairs.reduce((s, x) => s + x.volume.h24, 0) };
     S.priceFails = 0;
     $('livedot').classList.add('on'); $('livedot').classList.remove('stale');
-    refreshLiveCells(); renderMainChart(); renderDiamond();
+    refreshLiveCells(); renderSignal(); renderDiamond();
   } catch (e) {
     if (++S.priceFails > 2) { $('livedot').classList.add('stale'); $('livedot').classList.remove('on'); }
   }
-}
-
-async function pollTape() {
-  try {
-    const r = await fetch(`${BS}/tokens/${TOKEN}/transfers`);
-    const d = await r.json();
-    const px = S.livePrice || S.data.token.price;
-    const fresh = [];
-    for (const it of (d.items || [])) {
-      if (it.from.is_contract && it.to.is_contract) continue; // internal routing legs, not trades
-      const key = (it.transaction_hash || it.tx_hash || '') + ':' + (it.log_index ?? '') + ':' + it.from.hash + it.to.hash + it.total.value;
-      if (S.tapeSeen.has(key)) continue;
-      S.tapeSeen.add(key);
-      const amt = parseInt(it.total.value) / 1e18;
-      fresh.push({
-        ts: Math.floor(new Date(it.timestamp).getTime() / 1000),
-        from: it.from.hash, from_c: !!it.from.is_contract, from_name: it.from.name,
-        to: it.to.hash, to_c: !!it.to.is_contract, to_name: it.to.name,
-        amount: amt, usd: amt * px,
-        tx: it.transaction_hash || it.tx_hash, isNew: S.tapeBuf.length > 0,
-      });
-    }
-    fresh.sort((a, b) => b.ts - a.ts);
-    S.tapeBuf = fresh.concat(S.tapeBuf).slice(0, 150);
-    if (S.tapeSeen.size > 2000) S.tapeSeen = new Set(S.tapeBuf.map(t =>
-      t.tx + ':' + t.from + t.to + t.amount));
-    renderTape();
-    $('tapemeta').textContent = 'updated ' + fmtT(Math.floor(Date.now() / 1000)) + ' UTC';
-  } catch (e) {
-    $('tapemeta').textContent = 'reconnecting…';
-  }
-}
-
-function renderTape() {
-  const px = S.livePrice || S.data.token.price;
-  const rows = S.tapeBuf.filter(t => t.amount * px >= S.tapeFloor).slice(0, 80);
-  $('tapebody').innerHTML = rows.map(t => {
-    let side, actor, actorName, cls;
-    if (t.from_c && !t.to_c) { side = '▲ BUY'; cls = 'b'; actor = t.to; actorName = t.to_name; }
-    else if (!t.from_c && t.to_c) { side = '▼ SELL'; cls = 's'; actor = t.from; actorName = t.from_name; }
-    else { side = '⇄ XFER'; cls = 'x'; actor = t.from; actorName = t.from_name; }
-    const tracked = S.byAddr.get(actor.toLowerCase());
-    return `<tr class="${t.isNew ? 'fresh' : ''}">
-      <td class="l">${fmtT(t.ts)}</td>
-      <td class="l"><span class="side ${cls}">${side}</span></td>
-      <td>${fmtAmt(t.amount)}</td>
-      <td>${fmtUsd(t.amount * px)}</td>
-      <td class="l"><a href="${EXPLORER}/address/${actor}" target="_blank" rel="noopener">${actorName ? esc(actorName) : short(actor)}</a>${tracked ? ` <span class="whotag">#${tracked.rank}</span>` : ''}</td>
-      <td class="l"><a href="${EXPLORER}/tx/${t.tx}" target="_blank" rel="noopener">↗</a></td>
-    </tr>`;
-  }).join('') || `<tr><td class="l" colspan="6" style="color:var(--muted)">No trades above the current size filter yet.</td></tr>`;
-  S.tapeBuf.forEach(t => t.isNew = false);
 }
 
 /* ---------------- lookup ---------------- */
@@ -680,26 +685,26 @@ async function lookup() {
   }
   btn.disabled = false;
 }
-$('lookupbtn').addEventListener('click', lookup);
-$('lookupaddr').addEventListener('keydown', ev => { if (ev.key === 'Enter') lookup(); });
+if ($('lookupbtn')) {
+  $('lookupbtn').addEventListener('click', lookup);
+  $('lookupaddr').addEventListener('keydown', ev => { if (ev.key === 'Enter') lookup(); });
+}
 
 /* ---------------- controls ---------------- */
-$('sc-lin').addEventListener('click', () => { S.mainLog = false; syncScale(); renderMainChart(); });
-$('sc-log').addEventListener('click', () => { S.mainLog = true; syncScale(); renderMainChart(); });
+if ($('sc-lin')) {
+  $('sc-lin').addEventListener('click', () => { S.mainLog = false; syncScale(); renderSignal(); });
+  $('sc-log').addEventListener('click', () => { S.mainLog = true; syncScale(); renderSignal(); });
+}
 function syncScale() {
   $('sc-lin').setAttribute('aria-pressed', String(!S.mainLog));
   $('sc-log').setAttribute('aria-pressed', String(S.mainLog));
 }
-$('flowrange').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-  S.flowHours = +b.dataset.h;
-  $('flowrange').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-  renderFlow();
-}));
-$('tapefloor').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-  S.tapeFloor = +b.dataset.f;
-  $('tapefloor').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-  renderTape();
-}));
+if ($('flowrange'))
+  $('flowrange').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    S.flowHours = +b.dataset.h;
+    $('flowrange').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    renderSignal();
+  }));
 
 /* ---------------- boot ---------------- */
 async function boot() {
@@ -716,13 +721,12 @@ async function boot() {
   ranked.forEach((w, i) => S.byAddr.set(w.addr.toLowerCase(), { rank: i + 1, w }));
   S.data.wallets.forEach(liveCalc);
 
-  renderStats(); renderMainChart(); renderFlow(); renderAggr(); renderTable();
+  renderStats(); renderSignal(); renderAggr(); renderPreview(); renderTable();
   renderDiamond(); renderFlywheel(); renderInfra();
   $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at);
 
-  pollPrice(); pollTape();
+  pollPrice();
   setInterval(pollPrice, 30000);
-  setInterval(pollTape, 25000);
   setInterval(() => { $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at); }, 30000);
   let rt;
   window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderCharts, 200); });

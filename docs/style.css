@@ -135,11 +135,30 @@ nav.sections a:hover{color:var(--accent);text-decoration:none}
 .pills{display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;flex:none}
 .pills button{font-family:'Plex Mono',monospace;font-size:11px;padding:4px 10px;color:var(--muted)}
 .pills button[aria-pressed="true"]{background:var(--accent-chip);color:var(--ink)}
-.twocol{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch}
-.twocol>.card{min-width:0}
-@media (max-width:900px){.twocol{grid-template-columns:1fr}}
-.twocol .card{margin-bottom:24px;display:flex;flex-direction:column}
-.twocol .card .grow{flex:1}
+.morelink{font-size:13px;margin:12px 0 0;font-family:'Plex Mono',monospace;letter-spacing:.04em}
+
+/* ---------- the signal (stacked synced panels) ---------- */
+.sig{margin-top:6px}
+.siglbl{font-family:'Plex Mono',monospace;font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted);margin:10px 0 2px;padding-left:56px}
+.sig .siglbl:first-child{margin-top:0}
+.signote{position:absolute;top:8px;left:70px;right:16px;font-family:'Plex Mono',monospace;
+  font-size:10px;letter-spacing:.08em;color:var(--muted);pointer-events:none}
+
+/* ---------- ledger preview & page ---------- */
+.previewtbl{min-width:640px}
+tr.prow{cursor:pointer}
+tr.prow:hover td{background:var(--accent-soft)}
+.pagehead{margin:6px 0 22px}
+.pagehead h1{font-family:'Plex Mono',monospace;font-weight:600;margin:0 0 6px;
+  font-size:clamp(28px,4.6vw,44px);letter-spacing:.06em;text-transform:uppercase;
+  text-shadow:var(--glow)}
+.pagehead h1 .dim{color:var(--accent)}
+.pagehead .tagline{font-family:'Plex Mono',monospace;font-size:12px;letter-spacing:.14em;
+  color:var(--ink-2);margin:0}
+nav.sections a.navledger{color:var(--accent);border:1px solid rgba(168,224,90,.35);
+  border-radius:3px;padding:2px 8px;margin:-3px 0}
+nav.sections a.navledger:hover{background:var(--accent-chip)}
 
 /* ---------- charts ---------- */
 .chartbox{position:relative}
@@ -210,31 +229,41 @@ tr.detail>td{padding:0;background:var(--surface-2);text-align:left;white-space:n
 .side.x{background:var(--surface-3);color:var(--ink-2)}
 .cp{color:var(--ink-2)} .cptag{font-size:10px;color:var(--muted)}
 
-/* ---------- diamond hands ---------- */
-.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-.dcard{background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:12px 14px}
-.dcard .drank{font-family:'Plex Mono',monospace;font-size:11px;color:var(--muted)}
-.dcard .daddr{font-family:'Plex Mono',monospace;font-weight:600;font-size:14px;margin:2px 0 8px}
+/* ---------- diamond hands: specimen board ---------- */
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.dcard{position:relative;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:5px;padding:18px 20px 16px}
+.dcard.apex{border-color:rgba(168,224,90,.45);
+  box-shadow:0 0 22px rgba(168,224,90,.10),inset 0 0 30px rgba(168,224,90,.04)}
+.dbr{position:absolute;width:10px;height:10px;border:1.5px solid rgba(214,228,200,.30)}
+.dbr.b1{top:5px;left:5px;border-right:0;border-bottom:0}
+.dbr.b2{top:5px;right:5px;border-left:0;border-bottom:0}
+.dbr.b3{bottom:5px;left:5px;border-right:0;border-top:0}
+.dbr.b4{bottom:5px;right:5px;border-left:0;border-top:0}
+.dcard.apex .dbr{border-color:rgba(168,224,90,.55)}
+.dtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.dcard .drank{font-family:'Plex Mono',monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent)}
+.dcard .dsince{font-family:'Plex Mono',monospace;font-size:10.5px;color:var(--muted);
+  letter-spacing:.06em;text-transform:uppercase}
+.dcard .daddr{font-family:'Plex Mono',monospace;font-weight:600;font-size:15px;margin:0 0 10px}
 .dcard .daddr a{color:var(--ink)}
-.dmult{font-family:'Plex Mono',monospace;font-weight:600;font-size:22px;color:var(--good);
-  text-shadow:0 0 8px rgba(12,163,12,.35)}
+.badge.apexbadge{background:var(--accent);color:#0b1105}
+.dmult{font-family:'Plex Mono',monospace;font-weight:600;font-size:38px;line-height:1;
+  color:var(--good);text-shadow:0 0 14px rgba(12,163,12,.45)}
+.dsub{font-family:'Plex Mono',monospace;font-size:11.5px;color:var(--ink-2);margin:6px 0 2px}
 .drow{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);
-  font-family:'Plex Mono',monospace;padding-top:3px}
+  font-family:'Plex Mono',monospace;padding-top:4px}
 .drow b{color:var(--ink);font-weight:600}
-.heldbar{height:5px;border-radius:3px;background:var(--surface-3);margin:8px 0 6px;overflow:hidden}
-.heldbar i{display:block;height:100%;background:var(--accent);border-radius:3px}
-
-/* ---------- tape ---------- */
-.tape{max-height:430px;overflow-y:auto;border:1px solid var(--border);border-radius:5px;background:var(--surface)}
-.tape table{min-width:520px;font-size:12.5px}
-.tape thead th{position:sticky;top:0;background:var(--surface);z-index:2}
-.tape tr.fresh td{animation:flash 1.6s ease-out}
-@keyframes flash{0%{background:var(--accent-soft)}100%{background:transparent}}
-@media (prefers-reduced-motion:reduce){.tape tr.fresh td{animation:none}}
-.whotag{font-size:10px;font-weight:600;border-radius:3px;padding:1px 6px;
-  background:var(--accent-chip);color:var(--accent)}
+.heldbar{height:5px;border-radius:3px;background:var(--surface-3);margin:10px 0 6px;overflow:hidden}
+.heldbar i{display:block;height:100%;background:var(--accent);border-radius:3px;
+  box-shadow:0 0 6px rgba(168,224,90,.5)}
 
 /* ---------- lookup ---------- */
+.card.scan{border-color:rgba(168,224,90,.30);
+  box-shadow:inset 0 0 40px rgba(168,224,90,.04),var(--shadow)}
+.card.scan .lookupform input{font-size:15px;padding:13px 14px}
+.card.scan .btn{padding:13px 26px;font-size:13px}
 .lookupform{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
 .lookupform input{flex:1;min-width:250px;font-family:'Plex Mono',monospace;font-size:13px;
   background:var(--page);color:var(--ink);border:1px solid var(--baseline);border-radius:3px;padding:9px 12px}
