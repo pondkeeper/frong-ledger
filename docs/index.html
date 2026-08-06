@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Frong Ledger — live FRONG whale tracker</title>
+<meta name="description" content="Live whale tracker for FRONG on Robinhood Chain: top-50 wallet positions with verified cost basis, unrealized PnL, full trade histories, whale-vs-retail flow, and the locked-liquidity flywheel.">
+<meta property="og:title" content="Frong Ledger — live FRONG whale tracker">
+<meta property="og:description" content="Top-50 FRONG wallets with verified cost basis and PnL, live whale tape, and the locked-liquidity flywheel. Refreshed every 10 minutes from on-chain data.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://pondkeeper.github.io/frong-ledger/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
+<link rel="stylesheet" href="style.css">
+<script>
+/* apply saved theme before first paint to avoid flash */
+try{const t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
+</script>
+</head>
+<body>
+
+<div class="sitehead">
+  <div class="inner">
+    <span class="wordmark">🐸 Frong Ledger</span>
+    <span class="livechip"><span class="livedot" id="livedot"></span><span id="liveprice">—</span></span>
+    <nav class="sections" aria-label="Sections">
+      <a href="#whales">Whales</a>
+      <a href="#flow">Flow</a>
+      <a href="#diamond">Diamond hands</a>
+      <a href="#lookup">Your wallet</a>
+      <a href="#flywheel">Flywheel</a>
+      <a href="#tape">Tape</a>
+    </nav>
+    <button id="themebtn" aria-label="Toggle color theme">◐</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Every whale. Every trade. Verified.</h1>
+    <p>The top 50 FRONG wallets on Robinhood Chain with real cost basis and PnL,
+      rebuilt from every on-chain transfer and reconciled against on-chain balances
+      each run — plus a live trade tape, whale-vs-retail flow, and the locked-liquidity
+      flywheel. Data refreshes every 10 minutes; price is live.
+      <a href="methodology.html">How the numbers are made →</a></p>
+  </div>
+
+  <div class="stats" id="stats" aria-label="Market stats"></div>
+
+  <div class="card">
+    <div class="cardhead">
+      <div><h2>Price since launch</h2>
+        <p class="cardsub">Main FRONG/WETH v4 pool · <span id="chartmeta"></span></p></div>
+      <span class="spacer"></span>
+      <div class="pills" role="group" aria-label="Price scale">
+        <button id="sc-lin" aria-pressed="true">linear</button>
+        <button id="sc-log" aria-pressed="false">log</button>
+      </div>
+    </div>
+    <div class="chartbox" id="mainchart"></div>
+  </div>
+
+  <div class="twocol">
+    <div class="card" id="flow">
+      <div class="cardhead">
+        <div><h2>Whale flow vs holders</h2>
+          <p class="cardsub">Net FRONG bought (▲) or sold (▼) per hour by the top-50 wallets,
+            over the retail holder count. Divergence = whales absorbing or distributing.</p></div>
+        <span class="spacer"></span>
+        <div class="pills" role="group" aria-label="Flow window" id="flowrange">
+          <button data-h="24" aria-pressed="false">24h</button>
+          <button data-h="72" aria-pressed="true">72h</button>
+          <button data-h="0" aria-pressed="false">all</button>
+        </div>
+      </div>
+      <div class="grow">
+        <div class="chartbox" id="flowchart"></div>
+        <div class="chartbox" id="holderchart"></div>
+      </div>
+      <div class="legend">
+        <span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-pos"/></svg> net buying</span>
+        <span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-neg"/></svg> net selling</span>
+        <span class="key"><svg width="14" height="4"><rect width="14" height="2" y="1" class="holderline" fill="none" style="fill:var(--ink-2)"/></svg> holders</span>
+      </div>
+    </div>
+
+    <div class="card" id="tape">
+      <div class="cardhead">
+        <div><h2>Live tape</h2>
+          <p class="cardsub">Latest FRONG trades as they land on-chain · <span id="tapemeta">connecting…</span></p></div>
+        <span class="spacer"></span>
+        <div class="pills" role="group" aria-label="Minimum trade size" id="tapefloor">
+          <button data-f="0" aria-pressed="false">all</button>
+          <button data-f="500" aria-pressed="true">$500+</button>
+          <button data-f="5000" aria-pressed="false">$5k+</button>
+        </div>
+      </div>
+      <div class="tape grow tblwrap">
+        <table>
+          <thead><tr><th class="l">Time</th><th class="l">Side</th><th>FRONG</th><th>≈USD</th><th class="l">Wallet</th><th class="l">Tx</th></tr></thead>
+          <tbody id="tapebody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="whales">
+    <h2>Top 50 wallets</h2>
+    <p class="cardsub">Click a row for the full trade history plotted on the price curve.
+      Unrealized PnL is computed live against the current price.</p>
+    <div class="aggr stats" id="aggr" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"></div>
+    <div class="tblwrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th class="l">#</th>
+            <th class="l">Wallet</th>
+            <th><button data-sort="balance">Balance <span class="arr"></span></button></th>
+            <th><button data-sort="value_usd">Value <span class="arr"></span></button></th>
+            <th><button data-sort="avg_entry">Avg entry <span class="arr"></span></button></th>
+            <th><button data-sort="unrealized">Unrealized PnL <span class="arr"></span></button></th>
+            <th><button data-sort="realized">Realized <span class="arr"></span></button></th>
+            <th><button data-sort="first_ts">First entry <span class="arr"></span></button></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="diamond">
+    <h2>Diamond hands</h2>
+    <p class="cardsub">Day-one wallets ranked by unrealized multiple — and how much of
+      everything they ever bought they still hold.</p>
+    <div class="dgrid" id="dgrid"></div>
+  </div>
+
+  <div class="card" id="lookup">
+    <h2>Check any wallet</h2>
+    <p class="cardsub">Paste an address to rebuild its FRONG position: cost basis,
+      PnL, and full trade history — computed in your browser from on-chain data.</p>
+    <div class="lookupform">
+      <input id="lookupaddr" placeholder="0x… wallet address" spellcheck="false"
+             autocomplete="off" aria-label="Wallet address">
+      <button class="btn" id="lookupbtn">Look up</button>
+    </div>
+    <div class="lookupmsg" id="lookupmsg"></div>
+    <div id="lookupresult"></div>
+  </div>
+
+  <div class="card" id="flywheel">
+    <h2>The locked-liquidity flywheel</h2>
+    <p class="cardsub">FRONG's pool fees are never extracted. Each harvest, the protocol's
+      share is paired and re-deposited into the pool with the LP position sent to the burn
+      address — trading volume permanently deepens liquidity instead of paying anyone.</p>
+    <div class="fw-tiles" id="fwtiles"></div>
+    <div class="chartbox" id="fwchart"></div>
+    <div class="legend"><span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-acc"/></svg> FRONG recycled into locked liquidity, per day</span></div>
+  </div>
+
+  <div class="card infra">
+    <h2>Contract / infrastructure holders</h2>
+    <p class="cardsub">Pools, lockers and routers — inventory, not positions. Excluded from the rankings above.</p>
+    <div class="row" id="infra"></div>
+  </div>
+
+  <footer>
+    <div class="cols">
+      <span>Data: <a href="https://robinhoodchain.blockscout.com" rel="noopener">Blockscout</a> ·
+        <a href="https://www.geckoterminal.com" rel="noopener">GeckoTerminal</a> ·
+        <a href="https://dexscreener.com" rel="noopener">DexScreener</a></span>
+      <span><a href="methodology.html">Methodology &amp; limitations</a></span>
+      <span><a href="https://github.com/pondkeeper/frong-ledger" rel="noopener">open source ↗</a></span>
+      <span id="gen"></span>
+    </div>
+    <p>Not financial advice. All figures are estimates reconstructed from public on-chain data. 🐸</p>
+  </footer>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

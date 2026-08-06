@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Methodology — Frong Ledger</title>
+<meta name="description" content="How Frong Ledger computes cost basis, PnL, and whale flow — and the known limitations.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
+<link rel="stylesheet" href="style.css">
+<script>
+try{const t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}
+</script>
+</head>
+<body>
+<div class="sitehead">
+  <div class="inner">
+    <span class="wordmark">🐸 Frong Ledger</span>
+    <nav class="sections"><a href="index.html">← back to the ledger</a></nav>
+  </div>
+</div>
+<div class="wrap prose">
+  <h1>Methodology</h1>
+  <p>Every number on the ledger is reconstructed from public on-chain data and can be
+    independently verified. This page explains exactly how — and where the estimates
+    have known limits.</p>
+
+  <h2>Data sources</h2>
+  <ul>
+    <li><b>Transfers, holders, balances</b> — the Robinhood Chain
+      <a href="https://robinhoodchain.blockscout.com" rel="noopener">Blockscout</a> indexer.</li>
+    <li><b>Historical prices</b> — 5-minute candles for the main FRONG/WETH v4 pool from
+      <a href="https://www.geckoterminal.com" rel="noopener">GeckoTerminal</a>, covering the
+      token's entire life. Candles older than 48 hours are stored at hourly resolution.</li>
+    <li><b>Live price</b> — <a href="https://dexscreener.com" rel="noopener">DexScreener</a>,
+      polled from your browser every 30 seconds.</li>
+  </ul>
+
+  <h2>Cost basis &amp; PnL</h2>
+  <ul>
+    <li>Each tracked wallet's <b>complete FRONG transfer history</b> is fetched and kept.</li>
+    <li>Every inbound transfer is priced at the candle covering its timestamp; the wallet's
+      basis is the <b>weighted average</b> of all inflows.</li>
+    <li>Every outbound transfer realizes PnL against the running average and reduces the
+      basis proportionally (average-cost accounting, not FIFO).</li>
+    <li><b>Unrealized PnL</b> = current balance × (live price − average entry). It updates
+      live in your browser as the price moves.</li>
+  </ul>
+
+  <h2>Verification</h2>
+  <p>After each refresh, the balance implied by a wallet's reconstructed history is compared
+    to its actual on-chain balance. Wallets that don't reconcile are flagged
+    <code>reconciling</code> in the table rather than hidden — in practice this is a race
+    between the holder snapshot and a trade landing mid-refresh, and it self-heals on the
+    next cycle. At the time of the first release, all 50 tracked wallets reconciled exactly.</p>
+
+  <h2>Whale flow</h2>
+  <p>Net flow sums every tracked wallet's inbound minus outbound FRONG per hour. Transfers
+    between two tracked wallets cancel out, so internal shuffling doesn't fake a signal.
+    The holder-count line beneath it is sampled every refresh cycle.</p>
+
+  <h2>The flywheel numbers</h2>
+  <p>Harvest events are detected as FRONG inflows to the protocol fee recipient, which
+    pairs its share and re-deposits it into the pool with the resulting LP position sent
+    to the burn address. "FRONG recycled" is the cumulative sum of those inflows —
+    fees that became permanent liquidity instead of being extracted.</p>
+
+  <h2>Known limitations</h2>
+  <ul>
+    <li><b>Wallet-to-wallet receipts</b> are priced at market on receipt (tagged
+      <code>xfer-in</code>). If a whale moved coins between their own wallets, their true
+      cost is older and usually lower than shown.</li>
+    <li><b>Candle pricing</b> uses the main pool's 5-minute close. Trades executed during
+      violent moves, or routed through smaller pools at worse prices, carry small pricing
+      noise — fine for rankings and magnitudes, not for tax accounting.</li>
+    <li><b>Very high-frequency wallets</b> (thousands of transfers) may be truncated and are
+      tagged <code>partial</code> where so.</li>
+    <li><b>The any-wallet lookup</b> reads up to 400 recent transfers in your browser; older
+      history beyond that is omitted and flagged.</li>
+    <li>LP positions, and FRONG held inside protocol contracts, are out of scope — the ledger
+      tracks wallet balances only.</li>
+  </ul>
+
+  <h2>Refresh cadence</h2>
+  <p>A pipeline recomputes everything every ~10 minutes and commits the result; every commit
+    is a permanent, public, timestamped snapshot. The page you're reading always shows the
+    latest baseline plus a live price layer on top.</p>
+
+  <footer><p>Not financial advice. 🐸</p></footer>
+</div>
+</body>
+</html>

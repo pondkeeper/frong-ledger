@@ -1,0 +1,5 @@
+.DS_Store
+__pycache__/
+.local_cron.log
+.local_cron_err.log
+.surge_build/
