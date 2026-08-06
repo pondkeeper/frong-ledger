@@ -61,6 +61,14 @@ const fmtAgo = ts => {
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const $ = id => document.getElementById(id);
 
+/* ---------------- hero video: respect reduced motion ---------------- */
+{
+  const v = $('camvid');
+  if (v && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    v.removeAttribute('autoplay'); v.pause();
+  }
+}
+
 /* ---------------- cam clock ---------------- */
 setInterval(() => {
   const el = $('camclock');
