@@ -9,6 +9,7 @@ const EXPLORER = 'https://robinhoodchain.blockscout.com';
 const DS = 'https://api.dexscreener.com/latest/dex/tokens';
 const TOKEN = '0x6245e67affA44a23077f0Ea7f981a8DC743a0c47';
 const SUPPLY = 1e9;
+const TIP_ADDR = ''; // anon tip wallet — leave empty to hide the footer link
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const S = {
@@ -72,6 +73,35 @@ const $ = id => document.getElementById(id);
     tick(); setInterval(tick, 1000);
   }
 }
+
+/* ---------------- tabs ---------------- */
+const PANES = ['signal', 'scanner', 'diamond', 'flywheel'];
+const PANE_ALIAS = { lookup: 'scanner', whales: 'signal' };
+function setTab(name, updateHash) {
+  name = PANE_ALIAS[name] || name;
+  if (!PANES.includes(name)) name = 'signal';
+  if (!$('pane-' + name)) return;
+  document.querySelectorAll('.tabpane').forEach(p =>
+    p.classList.toggle('active', p.id === 'pane-' + name));
+  document.querySelectorAll('[data-tab]').forEach(b => {
+    const on = b.dataset.tab === name;
+    if (b.getAttribute('role') === 'tab') b.setAttribute('aria-selected', String(on));
+  });
+  if (updateHash !== false) history.replaceState(null, '', '#' + name);
+  if (S.data) {
+    if (name === 'signal') renderSignal();
+    if (name === 'flywheel') renderFlywheel();
+    if (name === 'scanner') { const i = $('lookupaddr'); if (i) i.focus(); }
+  }
+}
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-tab]');
+  if (!b) return;
+  ev.preventDefault();
+  setTab(b.dataset.tab);
+});
+window.addEventListener('hashchange', () => setTab(location.hash.slice(1), false));
+if ($('pane-signal')) setTab(location.hash.slice(1) || 'signal', false);
 
 /* ---------------- candle price lookup ---------------- */
 function priceAt(ts) {
@@ -405,28 +435,74 @@ function rowHTML(w, pos) {
   <tr class="detail" hidden><td colspan="9"></td></tr>`;
 }
 
-function renderPreview() {
-  const host = $('previewbody');
+function renderVerdict() {
+  const el = $('verdict');
+  if (!el) return;
+  const px = S.livePrice || S.data.token.price;
+  const now = Math.floor(Date.now() / 1000), x0 = now - 86400;
+  let net = 0, buyers = 0, sellers = 0;
+  for (const w of S.data.wallets) {
+    if (!w.in_top) continue;
+    let n = 0;
+    for (const t of w.txs) if (t.ts >= x0) n += isIn(t, w.addr) ? t.amount : -t.amount;
+    net += n;
+    if (n > 50000) buyers++; else if (n < -50000) sellers++;
+  }
+  const thr = SUPPLY * 0.0002;
+  const [head, cls] =
+    net > thr ? ['▲ WHALES ARE ACCUMULATING', 'up'] :
+    net < -thr ? ['▼ WHALES ARE DISTRIBUTING', 'dn'] :
+    ['● WHALES ARE HOLDING', 'mid'];
+  el.className = 'verdict ' + cls;
+  el.innerHTML = `<span class="vmain">${head}</span>
+    <span class="vsub">${net >= 0 ? '+' : ''}${fmtAmt(net)} FRONG net in 24h (≈${fmtUsd(Math.abs(net) * px)})
+      · ${buyers} buying vs ${sellers} selling
+      · <a href="#signal" data-tab="signal">see the tape ↓</a></span>`;
+}
+
+function renderMovers() {
+  const host = $('movers');
   if (!host) return;
-  const ws = S.data.wallets.filter(w => w.in_top).slice()
-    .sort((a, b) => b.balance - a.balance).slice(0, 8);
-  host.innerHTML = ws.map((w, i) => {
-    const u = w._unreal, uc = u == null ? '' : (u >= 0 ? 'pnl-pos' : 'pnl-neg');
-    return `<tr class="prow" tabindex="0" role="link" aria-label="Open the full ledger">
-      <td class="l rank">${i + 1}</td>
-      <td class="l"><span class="addr">${short(w.addr)}</span>${badges(w)}</td>
-      <td>${fmtAmt(w.balance)}<span class="subcell">${(w.balance / SUPPLY * 100).toFixed(2)}% supply</span></td>
-      <td>${fmtUsd(w._value)}</td>
-      <td>${fmtPx(w.avg_entry)}</td>
-      <td class="${uc}">${u == null ? '—' : fmtSigned(u)}</td>
-    </tr>`;
+  const mv = ((S.data.stats && S.data.stats.movers) || []).slice()
+    .sort((a, b) => Math.abs(b.net24) - Math.abs(a.net24)).slice(0, 6);
+  if (!mv.length) {
+    host.innerHTML = '<p class="cardsub">No large whale moves in the last 24h — quiet pond.</p>';
+    return;
+  }
+  host.innerHTML = '<div class="mvlist">' + mv.map(m => {
+    const pos = m.net24 >= 0;
+    const r = S.byAddr.get(m.addr.toLowerCase());
+    return `<div class="mv">
+      <span class="side ${pos ? 'b' : 's'}">${pos ? '▲ BOUGHT' : '▼ SOLD'}</span>
+      <a class="mvaddr" href="${EXPLORER}/address/${m.addr}" target="_blank" rel="noopener">${short(m.addr)}</a>
+      ${r ? `<span class="badge">whale #${r.rank}</span>` : ''}
+      ${m.cohort === 'day_one' || m.cohort === 'sniper' ? '<span class="badge og">day one</span>' : ''}
+      <span class="mvamt ${pos ? 'pnl-pos' : 'pnl-neg'}">${pos ? '+' : '−'}${fmtAmt(Math.abs(m.net24))}</span>
+      <span class="mvusd">${fmtUsd(Math.abs(m.usd24))}</span>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function renderCensus() {
+  const host = $('census');
+  if (!host) return;
+  const cs = (S.data.stats && S.data.stats.cohorts) || [];
+  if (!cs.length) { host.innerHTML = '<p class="cardsub">Cohort data lands on the next refresh.</p>'; return; }
+  const px = S.livePrice || S.data.token.price;
+  const names = { sniper: 'Snipers — first 10 min', day_one: 'Day one', early: 'Day 2–3', latecomer: 'After day 3' };
+  host.innerHTML = cs.map(c => {
+    const unr = c.avg_entry ? (px - c.avg_entry) * c.balance : c.unrealized;
+    return `<div class="cen">
+      <div class="cenhead"><b>${names[c.key] || c.label}</b>
+        <span>${c.n} wallets · ${c.pct_supply.toFixed(1)}% of supply</span></div>
+      <div class="cenrows">
+        <div class="cenrow"><span>avg entry</span><b>${fmtPx(c.avg_entry)}</b></div>
+        <div class="cenrow"><span>sitting on</span><b class="${unr >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtSigned(unr)}</b></div>
+        <div class="cenrow"><span>in profit</span><b>${c.in_profit} of ${c.n}</b></div>
+        <div class="cenrow"><span>still holding</span><b>${c.held_pct == null ? '—' : c.held_pct.toFixed(0) + '% of buys'}</b></div>
+      </div>
+    </div>`;
   }).join('');
-  host.querySelectorAll('tr.prow').forEach(tr => {
-    tr.addEventListener('click', () => { location.href = 'ledger.html'; });
-    tr.addEventListener('keydown', ev => {
-      if (ev.key === 'Enter') location.href = 'ledger.html';
-    });
-  });
 }
 
 function renderTable() {
@@ -577,7 +653,7 @@ function renderCharts() { renderSignal(); renderFlywheel(); }
 /* live-price refresh of computed cells without rebuilding the table */
 function refreshLiveCells() {
   S.data.wallets.forEach(liveCalc);
-  renderStats(); renderAggr(); renderPreview();
+  renderStats(); renderAggr(); renderVerdict(); renderMovers(); renderCensus();
   if (!$('tbody')) return;
   $('tbody').querySelectorAll('tr.hrow').forEach(tr => {
     const w = S.data.wallets.find(x => x.addr === tr.dataset.a);
@@ -721,9 +797,22 @@ async function boot() {
   ranked.forEach((w, i) => S.byAddr.set(w.addr.toLowerCase(), { rank: i + 1, w }));
   S.data.wallets.forEach(liveCalc);
 
-  renderStats(); renderSignal(); renderAggr(); renderPreview(); renderTable();
-  renderDiamond(); renderFlywheel(); renderInfra();
+  renderStats(); renderVerdict(); renderSignal(); renderMovers(); renderCensus();
+  renderAggr(); renderTable(); renderDiamond(); renderFlywheel(); renderInfra();
   $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at);
+
+  if (TIP_ADDR && $('tipline')) {
+    $('tipline').hidden = false;
+    const tl = $('tiplink');
+    tl.href = EXPLORER + '/address/' + TIP_ADDR;
+    tl.title = TIP_ADDR;
+    tl.addEventListener('click', ev => {
+      ev.preventDefault();
+      navigator.clipboard?.writeText(TIP_ADDR);
+      tl.textContent = 'address copied 🐸';
+      setTimeout(() => { tl.textContent = 'tip the pondkeeper'; }, 1600);
+    });
+  }
 
   pollPrice();
   setInterval(pollPrice, 30000);

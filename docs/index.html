@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Frong Ledger — live FRONG whale tracker</title>
-<meta name="description" content="Live whale tracker for FRONG on Robinhood Chain: whale flow vs price, top-50 wallet positions with verified cost basis, diamond-hands board, any-wallet scanner, and the locked-liquidity flywheel.">
-<meta property="og:title" content="Frong Ledger — live FRONG whale tracker">
-<meta property="og:description" content="Whale flow vs price, top-50 FRONG wallets with verified cost basis and PnL, and the locked-liquidity flywheel. Refreshed every 10 minutes from on-chain data.">
+<title>Frong Ledger — are the whales buying or selling?</title>
+<meta name="description" content="Live answer to one question: are FRONG whales buying or selling right now? Whale flow vs price, the top-50 ledger with verified cost basis, diamond hands, any-wallet scanner.">
+<meta property="og:title" content="Frong Ledger — are the whales buying or selling?">
+<meta property="og:description" content="Live whale verdict for FRONG on Robinhood Chain: whale flow vs price, top-50 wallets with verified cost basis and PnL, refreshed every 10 minutes from on-chain data.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://pondkeeper.github.io/frong-ledger/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -23,10 +23,10 @@
     <span class="wordmark">🐸 Frong Ledger</span>
     <span class="livechip"><span class="livedot" id="livedot"></span><span id="liveprice">—</span></span>
     <nav class="sections" aria-label="Sections">
-      <a href="#signal">Signal</a>
-      <a href="#lookup">Scan</a>
-      <a href="#diamond">Diamond hands</a>
-      <a href="#flywheel">Flywheel</a>
+      <a href="#signal" data-tab="signal">Signal</a>
+      <a href="#scanner" data-tab="scanner">Scanner</a>
+      <a href="#diamond" data-tab="diamond">Diamond hands</a>
+      <a href="#flywheel" data-tab="flywheel">Flywheel</a>
       <a href="ledger.html" class="navledger">The ledger</a>
     </nav>
   </div>
@@ -42,98 +42,109 @@
   <span class="hud tr"><span class="hud-verbose">POND CAM 01 · TARGET: WHALES · </span><span id="hudclock">--:--:--</span> UTC</span>
   <div class="hero-overlay">
     <h1>Frong <span class="dim">Ledger</span></h1>
-    <p class="tagline">EVERY WHALE · EVERY TRADE · VERIFIED
+    <p class="tagline">THE CAMERA POINTED AT THE 50 BIGGEST FRONG WALLETS
       <a class="method" href="methodology.html">HOW →</a></p>
+    <div class="verdict" id="verdict" aria-live="polite"></div>
     <div class="hudstats" id="stats" aria-label="Market stats"></div>
   </div>
 </section>
 
 <div class="wrap">
 
-  <div class="card" id="signal">
-    <div class="cardhead">
-      <div><h2>The signal — whales vs price</h2>
-        <p class="cardsub">What the 50 biggest wallets were doing at every price. Bars = net FRONG
-          bought (▲) or sold (▼) per hour by tracked whales; bottom line = holder count.
-          Whales buying while holders grow = absorption. <span id="chartmeta"></span></p></div>
-      <span class="spacer"></span>
-      <div class="pills" role="group" aria-label="Price scale">
-        <button id="sc-lin" aria-pressed="true">linear</button>
-        <button id="sc-log" aria-pressed="false">log</button>
+  <nav class="tabbar" role="tablist" aria-label="Views">
+    <button role="tab" data-tab="signal" aria-selected="true">📡 The Signal</button>
+    <button role="tab" data-tab="scanner" aria-selected="false">🔍 Scanner</button>
+    <button role="tab" data-tab="diamond" aria-selected="false">💎 Diamond hands</button>
+    <button role="tab" data-tab="flywheel" aria-selected="false">🔄 Flywheel</button>
+    <a class="tablink" href="ledger.html">📒 The Ledger ↗</a>
+  </nav>
+
+  <section class="tabpane active" id="pane-signal">
+    <div class="card" id="signal">
+      <div class="cardhead">
+        <div><h2>The signal — whales vs price</h2>
+          <p class="cardsub">Green bars = the 50 biggest wallets buying. Red = dumping.
+            Price on top, holder count below. Whales buying while holders climb =
+            accumulation. <span id="chartmeta"></span></p></div>
+        <span class="spacer"></span>
+        <div class="pills" role="group" aria-label="Price scale">
+          <button id="sc-lin" aria-pressed="true">linear</button>
+          <button id="sc-log" aria-pressed="false">log</button>
+        </div>
+        <div class="pills" role="group" aria-label="Window" id="flowrange">
+          <button data-h="24" aria-pressed="false">24h</button>
+          <button data-h="72" aria-pressed="true">72h</button>
+          <button data-h="0" aria-pressed="false">launch</button>
+        </div>
       </div>
-      <div class="pills" role="group" aria-label="Window" id="flowrange">
-        <button data-h="24" aria-pressed="false">24h</button>
-        <button data-h="72" aria-pressed="true">72h</button>
-        <button data-h="0" aria-pressed="false">launch</button>
+      <div class="sig">
+        <div class="siglbl">Price · USD</div>
+        <div class="chartbox" id="sigprice"></div>
+        <div class="siglbl">Whale net flow · FRONG/hr</div>
+        <div class="chartbox" id="sigflow"></div>
+        <div class="siglbl">Holders</div>
+        <div class="chartbox" id="sigholders"></div>
+      </div>
+      <div class="legend">
+        <span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-pos"/></svg> whales net buying</span>
+        <span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-neg"/></svg> whales net selling</span>
+        <span class="key"><svg width="14" height="4"><rect width="14" height="2" y="1" style="fill:var(--ink-2)"/></svg> holders</span>
       </div>
     </div>
-    <div class="sig">
-      <div class="siglbl">Price · USD</div>
-      <div class="chartbox" id="sigprice"></div>
-      <div class="siglbl">Whale net flow · FRONG/hr</div>
-      <div class="chartbox" id="sigflow"></div>
-      <div class="siglbl">Holders</div>
-      <div class="chartbox" id="sigholders"></div>
-    </div>
-    <div class="legend">
-      <span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-pos"/></svg> whales net buying</span>
-      <span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-neg"/></svg> whales net selling</span>
-      <span class="key"><svg width="14" height="4"><rect width="14" height="2" y="1" style="fill:var(--ink-2)"/></svg> holders</span>
-    </div>
-  </div>
 
-  <div class="card scan" id="lookup">
-    <h2>Scan any wallet</h2>
-    <p class="cardsub">Paste an address — cost basis, live PnL and the full trade history plotted
-      on the price curve, rebuilt in your browser from on-chain data.</p>
-    <div class="lookupform">
-      <input id="lookupaddr" placeholder="0x… wallet address" spellcheck="false"
-             autocomplete="off" aria-label="Wallet address">
-      <button class="btn" id="lookupbtn">Scan</button>
+    <div class="twocol">
+      <div class="card">
+        <h2>Last 24h — biggest whale moves</h2>
+        <p class="cardsub">Net position change of tracked whales over the last day.
+          Full histories in <a href="ledger.html">the ledger</a>.</p>
+        <div id="movers"></div>
+      </div>
+      <div class="card">
+        <h2>Pond census — who's actually winning</h2>
+        <p class="cardsub">The top 50 split by when they entered. Early birds vs top buyers.</p>
+        <div id="census"></div>
+      </div>
     </div>
-    <div class="lookupmsg" id="lookupmsg"></div>
-    <div id="lookupresult"></div>
-  </div>
+  </section>
 
-  <div class="card" id="diamond">
-    <div class="cardhead">
-      <div><h2>Diamond hands</h2>
-        <p class="cardsub">Day-one wallets that never let go — the six strongest hands in the pond,
-          ranked by unrealized multiple.</p></div>
+  <section class="tabpane" id="pane-scanner">
+    <div class="card scan" id="lookup">
+      <h2>Scan any wallet</h2>
+      <p class="cardsub">Paste an address — cost basis, live PnL and the full trade history plotted
+        on the price curve, rebuilt in your browser from on-chain data. Works for any FRONG
+        wallet, not just whales.</p>
+      <div class="lookupform">
+        <input id="lookupaddr" placeholder="0x… wallet address" spellcheck="false"
+               autocomplete="off" aria-label="Wallet address">
+        <button class="btn" id="lookupbtn">Scan</button>
+      </div>
+      <div class="lookupmsg" id="lookupmsg"></div>
+      <div id="lookupresult"></div>
     </div>
-    <div class="dgrid" id="dgrid"></div>
-  </div>
+  </section>
 
-  <div class="card" id="whales">
-    <div class="cardhead">
-      <div><h2>The ledger — top 50 wallets</h2>
-        <p class="cardsub">Every tracked whale: balance, verified cost basis, live PnL and the
-          full trade history behind each position.</p></div>
-      <span class="spacer"></span>
-      <a class="btn" href="ledger.html">Open the full ledger →</a>
+  <section class="tabpane" id="pane-diamond">
+    <div class="card" id="diamond">
+      <div class="cardhead">
+        <div><h2>Diamond hands</h2>
+          <p class="cardsub">Day-one wallets that never let go — the six strongest hands in the pond,
+            ranked by unrealized multiple.</p></div>
+      </div>
+      <div class="dgrid" id="dgrid"></div>
     </div>
-    <div class="aggr stats" id="aggr" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"></div>
-    <div class="tblwrap">
-      <table class="previewtbl">
-        <thead><tr>
-          <th class="l">#</th><th class="l">Wallet</th><th>Balance</th><th>Value</th>
-          <th>Avg entry</th><th>Unrealized PnL</th>
-        </tr></thead>
-        <tbody id="previewbody"></tbody>
-      </table>
-    </div>
-    <p class="morelink"><a href="ledger.html">All 50 wallets with full trade histories →</a></p>
-  </div>
+  </section>
 
-  <div class="card" id="flywheel">
-    <h2>The locked-liquidity flywheel</h2>
-    <p class="cardsub">FRONG's pool fees are never extracted. Each harvest, the protocol's
-      share is paired and re-deposited into the pool with the LP position sent to the burn
-      address — trading volume permanently deepens liquidity instead of paying anyone.</p>
-    <div class="fw-tiles" id="fwtiles"></div>
-    <div class="chartbox" id="fwchart"></div>
-    <div class="legend"><span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-acc"/></svg> FRONG recycled into locked liquidity, per day</span></div>
-  </div>
+  <section class="tabpane" id="pane-flywheel">
+    <div class="card" id="flywheel">
+      <h2>The locked-liquidity flywheel</h2>
+      <p class="cardsub">FRONG's pool fees are never extracted. Each harvest, the protocol's
+        share is paired and re-deposited into the pool with the LP position sent to the burn
+        address — trading volume permanently deepens liquidity instead of paying anyone.</p>
+      <div class="fw-tiles" id="fwtiles"></div>
+      <div class="chartbox" id="fwchart"></div>
+      <div class="legend"><span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-acc"/></svg> FRONG recycled into locked liquidity, per day</span></div>
+    </div>
+  </section>
 
   <footer>
     <div class="cols">
@@ -142,8 +153,8 @@
         <a href="https://dexscreener.com" rel="noopener">DexScreener</a></span>
       <span><a href="methodology.html">Methodology &amp; limitations</a></span>
       <span><a href="assets/frong-original.mp4">original teaser — full 24s (archived) ↗</a></span>
-      <span><a href="assets/frong-countdown.mp4">countdown edit (archived) ↗</a></span>
       <span><a href="https://github.com/pondkeeper/frong-ledger" rel="noopener">open source ↗</a></span>
+      <span id="tipline" hidden>🐸 <a id="tiplink" href="#">tip the pondkeeper</a></span>
       <span id="gen"></span>
     </div>
     <p>Not financial advice. All figures are estimates reconstructed from public on-chain data. 🐸</p>
