@@ -844,8 +844,9 @@ if ($('flowrange'))
 
 /* ---------------- boot ---------------- */
 async function boot() {
+  const cb = Math.floor(Date.now() / 300000); // 5-min bucket busts the Pages CDN cache
   const [dr, sr] = await Promise.all([
-    fetch('data/data.json'), fetch('data/snapshots.jsonl'),
+    fetch('data/data.json?t=' + cb), fetch('data/snapshots.jsonl?t=' + cb),
   ]);
   S.data = await dr.json();
   const stext = await sr.text();
