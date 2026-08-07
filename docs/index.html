@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Frong Ledger — are the whales buying or selling?</title>
+<title>Frong Ledger</title>
 <meta name="description" content="Live answer to one question: are FRONG whales buying or selling right now? Whale flow vs price, the top-50 ledger with verified cost basis, diamond hands, any-wallet scanner.">
 <meta property="og:title" content="Frong Ledger — are the whales buying or selling?">
 <meta property="og:description" content="Live whale verdict for FRONG on Robinhood Chain: whale flow vs price, top-50 wallets with verified cost basis and PnL, refreshed every 10 minutes from on-chain data.">
@@ -12,7 +12,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -38,6 +38,11 @@
     <p class="tagline">THE CAMERA POINTED AT THE 50 BIGGEST FRONG WALLETS
       <a class="method" href="methodology.html">HOW →</a></p>
     <div class="verdict" id="verdict" aria-live="polite"></div>
+    <form class="heroscan" id="heroscan">
+      <input id="heroaddr" placeholder="0x… paste any wallet — PnL in 5 seconds" spellcheck="false"
+             autocomplete="off" aria-label="Wallet address">
+      <button class="btn" type="submit">Scan</button>
+    </form>
     <div class="hudstats" id="stats" aria-label="Market stats"></div>
   </div>
 </section>
@@ -46,7 +51,7 @@
 
   <nav class="tabbar" role="tablist" aria-label="Views">
     <button role="tab" data-tab="signal" aria-selected="true">📡 The Signal</button>
-    <button role="tab" data-tab="scanner" aria-selected="false">🔍 Scanner</button>
+    <button role="tab" data-tab="scanner" aria-selected="false">🔍 Scan your wallet</button>
     <button role="tab" data-tab="diamond" aria-selected="false">💎 Diamond hands</button>
     <button role="tab" data-tab="flywheel" aria-selected="false">🔄 Flywheel</button>
     <a class="tablink" href="ledger.html">📒 The Ledger · all 50 whales ↗</a>
@@ -81,12 +86,18 @@
       <p class="chartfoot"><span id="chartmeta"></span></p>
     </div>
 
-    <div class="card" id="moves">
-      <h2>Biggest whale moves · last 24h</h2>
-      <p class="cardsub">Who bought and who dumped in the last day. Tap a wallet for its
-        full history in <a href="ledger.html">the ledger</a>.</p>
-      <div id="movers"></div>
-      <a class="btn ledgercta" href="ledger.html">Open the ledger — all 50 whales, entries &amp; full histories →</a>
+    <div class="twocol">
+      <div class="card" id="moves">
+        <h2>Biggest whale moves · last 24h</h2>
+        <p class="cardsub">Who bought and who dumped in the last day.</p>
+        <div id="movers"></div>
+        <a class="btn ledgercta" href="ledger.html">Open the ledger — all 50 whales →</a>
+      </div>
+      <div class="card apexcard" id="apexspot">
+        <h2>Apex specimen</h2>
+        <p class="cardsub">The strongest hands in the pond right now.</p>
+        <div id="apexbody"></div>
+      </div>
     </div>
   </section>
 
@@ -119,13 +130,12 @@
 
   <section class="tabpane" id="pane-flywheel">
     <div class="card" id="flywheel">
-      <h2>The locked-liquidity flywheel</h2>
-      <p class="cardsub">FRONG's pool fees are never extracted. Each harvest, the protocol's
-        share is paired and re-deposited into the pool with the LP position sent to the burn
-        address — trading volume permanently deepens liquidity instead of paying anyone.</p>
+      <h2>The flywheel — liquidity only goes up</h2>
+      <p class="cardsub">FRONG's trading fees never get cashed out. Every harvest is re-deposited
+        into the pool and the LP is burned forever. More trading → deeper pool. Nobody can pull it.</p>
       <div class="fw-tiles" id="fwtiles"></div>
+      <div class="siglbl">FRONG locked into the pool · running total</div>
       <div class="chartbox" id="fwchart"></div>
-      <div class="legend"><span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-acc"/></svg> FRONG recycled into locked liquidity, per day</span></div>
     </div>
   </section>
 
@@ -144,6 +154,6 @@
   </footer>
 </div>
 
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

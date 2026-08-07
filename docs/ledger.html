@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The Ledger — top 50 FRONG wallets</title>
+<title>Frong Ledger</title>
 <meta name="description" content="The full FRONG whale ledger: top-50 wallet positions with verified cost basis, live unrealized and realized PnL, and complete trade histories plotted on the price curve.">
 <meta property="og:title" content="The Ledger — top 50 FRONG wallets">
 <meta property="og:description" content="Every tracked FRONG whale: balance, verified cost basis, live PnL and the full trade history behind each position.">
@@ -12,7 +12,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -22,20 +22,22 @@
   <div class="inner">
     <span class="wordmark">🐸 <a href="index.html" style="color:inherit">Frong Ledger</a></span>
     <span class="livechip"><span class="livedot" id="livedot"></span><span id="liveprice">—</span></span>
-    <nav class="sections" aria-label="Sections">
-      <a href="index.html#signal">Signal</a>
-      <a href="index.html#lookup">Scan</a>
-      <a href="index.html#diamond">Diamond hands</a>
-      <a href="index.html#flywheel">Flywheel</a>
-      <a href="ledger.html" class="navledger" aria-current="page">The ledger</a>
-    </nav>
   </div>
 </div>
 
 <div class="wrap">
+  <nav class="tabbar" aria-label="Views">
+    <a class="tabbtn" href="index.html#signal">📡 The Signal</a>
+    <a class="tabbtn" href="index.html#scanner">🔍 Scan your wallet</a>
+    <a class="tabbtn" href="index.html#diamond">💎 Diamond hands</a>
+    <a class="tabbtn" href="index.html#flywheel">🔄 Flywheel</a>
+    <span class="tablink on" aria-current="page">📒 The Ledger</span>
+  </nav>
+
   <div class="pagehead">
     <h1>The <span class="dim">Ledger</span></h1>
     <p class="tagline">TOP 50 WALLETS · VERIFIED COST BASIS · LIVE PNL</p>
+    <p class="scanpromo">Want to see YOUR wallet like this? <a href="index.html#scanner">Scan it →</a></p>
   </div>
 
   <div class="card" id="whales">
@@ -82,6 +84,6 @@
   </footer>
 </div>
 
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

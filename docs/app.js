@@ -202,7 +202,7 @@ function drawLine(host, opts) {
     const ly = Math.max(M.t + 14, ey - 11);
     svg += `<circle class="enddot-halo" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="7"/>`
       + `<circle class="enddot" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5"/>`
-      + `<text class="endlbl" x="${(ex - 10).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="end">${esc(fmtPx(lp[1]))}</text>`;
+      + `<text class="endlbl" x="${(ex - 10).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="end">${esc((opts.endFmt || fmtPx)(lp[1]))}</text>`;
   }
 
   if (opts.refY != null && opts.refY > yMin && opts.refY < yMax) {
@@ -647,12 +647,45 @@ function buildPanel(w) {
   return el;
 }
 
-function renderDiamond() {
-  if (!$('dgrid')) return;
+function topDiamond() {
   const px = S.livePrice || S.data.token.price;
   const day1 = S.data.wallets.filter(w => w.in_top && w.first_ts && w.first_ts - S.launch < 86400 && w.avg_entry);
   day1.forEach(w => { w._mult = px / w.avg_entry; });
-  const top = day1.sort((a, b) => b._mult - a._mult).slice(0, 6);
+  return day1.sort((a, b) => b._mult - a._mult);
+}
+
+function renderApex() {
+  const host = $('apexbody');
+  if (!host) return;
+  const px = S.livePrice || S.data.token.price;
+  const day1 = topDiamond();
+  const card = host.closest('.card');
+  if (!day1.length) { if (card) card.style.display = 'none'; return; }
+  if (card) card.style.display = '';
+  const w = day1[0];
+  const bought = w.txs.filter(t => isIn(t, w.addr)).reduce((s, t) => s + t.amount, 0);
+  const held = bought > 0 ? Math.min(100, w.balance / bought * 100) : 0;
+  const never = w.sell_usd < 1;
+  const days = Math.max(1, Math.floor((Date.now() / 1000 - w.first_ts) / 86400));
+  host.innerHTML = `
+    <div class="axrank">SPECIMEN 01 · APEX</div>
+    <div class="axaddr"><a href="${EXPLORER}/address/${w.addr}" target="_blank" rel="noopener">${short(w.addr)}</a>
+      ${never ? '<span class="badge og">never sold</span>' : ''}</div>
+    <div class="axmult">×${w._mult >= 100 ? w._mult.toFixed(0) : w._mult.toFixed(1)}</div>
+    <div class="axline">bought day one at ${fmtPx(w.avg_entry)} —
+      ${never ? 'has never sold a single FRONG' : 'still holding ' + held.toFixed(0) + '% of every buy'}</div>
+    <div class="heldbar"><i style="width:${held.toFixed(0)}%"></i></div>
+    <div class="axrows">
+      <div class="drow"><span>position now</span><b>${fmtUsd(w.balance * px)}</b></div>
+      <div class="drow"><span>in the pond</span><b>${days} days</b></div>
+    </div>
+    <button class="btn axbtn" data-tab="diamond">meet all the diamond hands →</button>`;
+}
+
+function renderDiamond() {
+  if (!$('dgrid')) return;
+  const px = S.livePrice || S.data.token.price;
+  const top = topDiamond().slice(0, 6);
   $('dgrid').innerHTML = top.map((w, i) => {
     const bought = w.txs.filter(t => isIn(t, w.addr)).reduce((s, t) => s + t.amount, 0);
     const held = bought > 0 ? Math.min(100, w.balance / bought * 100) : 0;
@@ -678,26 +711,25 @@ function renderDiamond() {
 
 function renderFlywheel() {
   if (!$('fwtiles')) return;
-  const hv = S.data.harvests || [];
+  const hv = (S.data.harvests || []).slice().sort((a, b) => a.ts - b.ts);
   const px = S.livePrice || S.data.token.price;
   const tot = hv.reduce((s, h) => s + h.frong, 0);
   const last = hv.length ? hv[hv.length - 1].ts : null;
   $('fwtiles').innerHTML = [
-    ['FRONG recycled', fmtAmt(tot) + `<span class="delta">${(tot / SUPPLY * 100).toFixed(2)}% of supply</span>`],
-    ['≈ value at current price', fmtUsd(tot * px)],
+    ['Locked so far', fmtAmt(tot) + `<span class="delta">${(tot / SUPPLY * 100).toFixed(1)}% of supply</span>`],
+    ['Worth right now', fmtUsd(tot * px)],
     ['Harvests', String(hv.length)],
     ['Last harvest', last ? fmtAgo(last) : '—'],
   ].map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="val">${v}</div></div>`).join('');
-  const map = new Map();
-  for (const h of hv) {
-    const d = h.ts - h.ts % 86400;
-    map.set(d, (map.get(d) || 0) + h.frong);
-  }
-  const buckets = [...map.entries()].map(([ts, val]) => ({ ts, val })).sort((a, b) => a.ts - b.ts);
-  let cum = 0; buckets.forEach(b => { cum += b.val; b.cum = cum; });
-  drawBars($('fwchart'), { buckets, bucketSec: 86400, height: 170, diverging: false,
-    barClass: 'bar-acc', label: 'FRONG recycled into locked liquidity per day',
-    tipFmt: b => `<b>${fmtAmt(b.val)} FRONG</b> recycled<br><span class="t2">${fmtD(b.ts)} · cumulative ${fmtAmt(b.cum)}</span>` });
+  if (!hv.length) { $('fwchart').innerHTML = ''; return; }
+  let cum = 0;
+  const pts = hv.map(h => (cum += h.frong, [h.ts, cum]));
+  pts.push([Math.floor(Date.now() / 1000), cum]);
+  if (pts.length >= 2)
+    drawLine($('fwchart'), { points: pts, height: 200,
+      yFmt: fmtAmt, endDot: true, endFmt: v => fmtAmt(v) + ' FRONG',
+      yTipFmt: v => fmtAmt(v) + ' FRONG locked forever',
+      label: 'Cumulative FRONG locked into the pool' });
 }
 
 function renderInfra() {
@@ -739,7 +771,7 @@ async function pollPrice() {
       vol24: d.pairs.reduce((s, x) => s + x.volume.h24, 0) };
     S.priceFails = 0;
     $('livedot').classList.add('on'); $('livedot').classList.remove('stale');
-    refreshLiveCells(); renderSignal(); renderDiamond();
+    refreshLiveCells(); renderSignal(); renderDiamond(); renderApex();
   } catch (e) {
     if (++S.priceFails > 2) { $('livedot').classList.add('stale'); $('livedot').classList.remove('on'); }
   }
@@ -825,6 +857,17 @@ if ($('lookupbtn')) {
   $('lookupbtn').addEventListener('click', lookup);
   $('lookupaddr').addEventListener('keydown', ev => { if (ev.key === 'Enter') lookup(); });
 }
+if ($('heroscan')) {
+  $('heroscan').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const v = $('heroaddr').value.trim();
+    setTab('scanner');
+    const la = $('lookupaddr');
+    if (la) la.value = v;
+    $('pane-scanner').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (v && S.data) lookup();
+  });
+}
 
 /* ---------------- controls ---------------- */
 if ($('sc-lin')) {
@@ -858,7 +901,7 @@ async function boot() {
   ranked.forEach((w, i) => S.byAddr.set(w.addr.toLowerCase(), { rank: i + 1, w }));
   S.data.wallets.forEach(liveCalc);
 
-  renderStats(); renderVerdict(); renderSignal(); renderMovers();
+  renderStats(); renderVerdict(); renderSignal(); renderMovers(); renderApex();
   renderAggr(); renderTable(); renderDiamond(); renderFlywheel(); renderInfra();
   $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at);
 

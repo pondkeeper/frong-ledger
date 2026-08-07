@@ -162,8 +162,36 @@ nav.sections a:hover{color:var(--accent);text-decoration:none}
   .tabbar [role="tab"],.tabbar .tablink{padding:9px 10px;font-size:11px;letter-spacing:.06em}
   .tabbar .tablink{margin-left:0}
 }
-.tabpane{display:none}
+.tabbar a.tabbtn{font-family:'Plex Mono',monospace;font-size:12px;font-weight:600;
+  letter-spacing:.10em;text-transform:uppercase;color:var(--ink-2);
+  padding:10px 16px;border-radius:4px;white-space:nowrap}
+.tabbar a.tabbtn:hover{color:var(--ink);background:var(--surface-2);text-decoration:none}
+.tabbar .tablink.on{background:var(--accent-chip);color:var(--accent);
+  box-shadow:inset 0 0 0 1px rgba(168,224,90,.35);animation:none;cursor:default}
+.tabpane{display:none;scroll-margin-top:110px}
 .tabpane.active{display:block}
+
+/* ---------- hero scan ---------- */
+.heroscan{display:flex;gap:8px;max-width:530px;margin:16px 0 2px}
+.heroscan input{flex:1;min-width:0;font-family:'Plex Mono',monospace;font-size:13.5px;
+  background:rgba(7,10,6,.74);color:var(--ink);border:1px solid rgba(168,224,90,.35);
+  border-radius:3px;padding:11px 13px;backdrop-filter:blur(3px)}
+.heroscan input::placeholder{color:var(--muted)}
+.heroscan .btn{padding:11px 20px}
+
+/* ---------- apex specimen spotlight ---------- */
+.apexcard{border-color:rgba(168,224,90,.45);
+  box-shadow:0 0 26px rgba(168,224,90,.10),inset 0 0 34px rgba(168,224,90,.04)}
+.axrank{font-family:'Plex Mono',monospace;font-size:11px;font-weight:600;
+  letter-spacing:.20em;color:var(--accent);margin-bottom:6px}
+.axaddr{font-family:'Plex Mono',monospace;font-weight:600;font-size:16px;margin-bottom:10px}
+.axaddr a{color:var(--ink)}
+.axmult{font-family:'Plex Mono',monospace;font-weight:600;font-size:54px;line-height:1;
+  color:var(--good);text-shadow:0 0 18px rgba(12,163,12,.5)}
+.axline{font-family:'Plex Mono',monospace;font-size:12.5px;color:var(--ink-2);margin:10px 0 4px}
+.axrows{margin:6px 0 4px}
+.axbtn{margin-top:14px}
+.scanpromo{font-family:'Plex Mono',monospace;font-size:12.5px;color:var(--ink-2);margin:10px 0 0}
 
 /* ---------- verdict ---------- */
 .verdict{margin:18px 0 4px}
