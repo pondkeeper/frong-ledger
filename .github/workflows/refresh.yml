@@ -1,7 +1,8 @@
 name: refresh-data
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    # offset from :00/:10 marks — GitHub deprioritizes the congested slots
+    - cron: "4-59/10 * * * *"
   workflow_dispatch:
 
 permissions:
