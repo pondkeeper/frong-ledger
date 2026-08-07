@@ -245,6 +245,12 @@ nav.sections a.navledger:hover{background:var(--accent-chip)}
 .mk-sell{fill:var(--down);stroke:var(--surface);stroke-width:2}
 .bar-pos{fill:var(--good)} .bar-neg{fill:var(--down)}
 .bar-acc{fill:var(--accent)}
+.zeroline{stroke:rgba(214,228,200,.38);stroke-width:1}
+.glow-pos{filter:drop-shadow(0 0 3px rgba(60,200,70,.35))}
+.glow-neg{filter:drop-shadow(0 0 3px rgba(230,103,103,.35))}
+.chartbox [data-bi]{transition:filter .12s}
+@media (prefers-reduced-motion:reduce){.chartbox [data-bi]{transition:none}}
+.chartbox [data-bi]:hover{filter:brightness(1.35) drop-shadow(0 0 5px rgba(168,224,90,.5))}
 .crossline{stroke:var(--baseline);stroke-width:1;pointer-events:none}
 .crossdot{fill:var(--accent);stroke:var(--surface);stroke-width:2;pointer-events:none}
 .tip{position:absolute;pointer-events:none;background:var(--surface-2);border:1px solid var(--baseline);

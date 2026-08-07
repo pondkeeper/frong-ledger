@@ -271,21 +271,24 @@ function drawBars(host, opts) {
   const M = { t: 10, r: 14, b: opts.xTicks === false ? 8 : 24, l: 56 };
   const iw = W - M.l - M.r, ih = H - M.t - M.b;
   const x0 = opts.x0 ?? bk[0].ts, x1 = opts.x1 ?? (bk[bk.length - 1].ts + opts.bucketSec);
-  const maxAbs = Math.max(...bk.map(b => Math.abs(b.val)), 1e-9) * 1.08;
-  const diverging = opts.diverging !== false && bk.some(b => b.val < 0);
-  const yMin = diverging ? -maxAbs : 0, yMax = maxAbs;
+  const maxPos = Math.max(...bk.map(b => b.val), 0);
+  const maxNeg = Math.max(...bk.map(b => -b.val), 0);
+  const diverging = opts.diverging !== false && maxNeg > 0;
+  const yMax = (Math.max(maxPos, maxNeg) || 1e-9) * 1.12;
+  const yMin = diverging ? -Math.max(maxNeg * 1.12, yMax * 0.14) : 0;
   const X = t => M.l + (t - x0) / Math.max(1, x1 - x0) * iw;
   const Y = v => M.t + ih - (v - yMin) / (yMax - yMin) * ih;
   const bw = Math.max(1.5, iw / Math.max(1, (x1 - x0) / opts.bucketSec) - 2);
   const yFmt = opts.yFmt || fmtAmt;
+  const gid = ++GID;
 
   let g = '';
   for (const [t] of xTickList(x0, x1)) {
     const x = X(t);
     g += `<line class="gridline" x1="${x.toFixed(1)}" y1="${M.t}" x2="${x.toFixed(1)}" y2="${M.t + ih}"/>`;
   }
-  const step = niceStep(maxAbs / 2);
-  for (let v = diverging ? -Math.floor(maxAbs / step) * step : 0; v <= maxAbs; v += step) {
+  const step = niceStep((yMax - yMin) / 3);
+  for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) {
     const y = Y(v);
     g += `<line class="gridline" x1="${M.l}" y1="${y}" x2="${W - M.r}" y2="${y}"/>`
       + `<text class="ticktext" x="${M.l - 8}" y="${y + 3}" text-anchor="end">${yFmt(v)}</text>`;
@@ -293,20 +296,39 @@ function drawBars(host, opts) {
   if (opts.xTicks !== false)
     for (const [t, lbl] of xTickList(x0, x1))
       g += `<text class="ticktext" x="${X(t)}" y="${H - 6}" text-anchor="middle">${lbl}</text>`;
-  g += `<line class="axisline" x1="${M.l}" y1="${Y(0)}" x2="${W - M.r}" y2="${Y(0)}"/>`;
+  g += `<line class="zeroline" x1="${M.l}" y1="${Y(0)}" x2="${W - M.r}" y2="${Y(0)}"/>`;
+
+  const defs = `<defs>
+    <linearGradient id="gp${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#68e372"/><stop offset="1" stop-color="#0d840d"/></linearGradient>
+    <linearGradient id="gn${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a84444"/><stop offset="1" stop-color="#f28f8f"/></linearGradient>
+    <linearGradient id="ga${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cdf381"/><stop offset="1" stop-color="#7fae40"/></linearGradient>
+  </defs>`;
 
   let bars = '';
   bk.forEach((b, i) => {
     if (Math.abs(b.val) < 1e-12) return;
-    const x = X(b.ts) + 1, y0 = Y(0), y1v = Y(b.val);
-    const yTop = Math.min(y0, y1v), h = Math.max(1.2, Math.abs(y0 - y1v));
-    const cls = opts.barClass || (b.val >= 0 ? 'bar-pos' : 'bar-neg');
-    bars += `<rect class="${cls}" x="${x.toFixed(1)}" width="${bw.toFixed(1)}" y="${yTop.toFixed(1)}" height="${h.toFixed(1)}" rx="2" data-bi="${i}"/>`;
+    const x = X(b.ts) + 1, y0 = Y(0);
+    const pos = b.val >= 0;
+    const h = Math.max(2, Math.abs(y0 - Y(b.val)));
+    const r = Math.min(3, bw / 2, h / 2);
+    const cls = pos || opts.barClass ? 'glow-pos' : 'glow-neg';
+    let d;
+    if (pos || opts.barClass) {
+      const yt = y0 - h;
+      d = `M${x.toFixed(1)} ${y0.toFixed(1)}V${(yt + r).toFixed(1)}a${r} ${r} 0 0 1 ${r} ${-r}h${(bw - 2 * r).toFixed(1)}a${r} ${r} 0 0 1 ${r} ${r}V${y0.toFixed(1)}Z`;
+    } else {
+      const yb = y0 + h;
+      d = `M${x.toFixed(1)} ${y0.toFixed(1)}V${(yb - r).toFixed(1)}a${r} ${r} 0 0 0 ${r} ${r}h${(bw - 2 * r).toFixed(1)}a${r} ${r} 0 0 0 ${r} ${-r}V${y0.toFixed(1)}Z`;
+    }
+    bars += `<path class="${cls}" style="fill:url(#${opts.barClass ? 'ga' : pos ? 'gp' : 'gn'}${gid})" d="${d}" data-bi="${i}"/>`;
   });
-  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || 'bar chart')}">${g}${bars}</svg><div class="tip"></div>`;
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || 'bar chart')}">${defs}${g}${bars}</svg><div class="tip"></div>`;
 
   const svgEl = host.querySelector('svg'), tip = host.querySelector('.tip');
-  svgEl.querySelectorAll('rect[data-bi]').forEach(r => {
+  svgEl.querySelectorAll('[data-bi]').forEach(r => {
     r.addEventListener('mousemove', () => {
       const b = bk[+r.dataset.bi];
       const rect = svgEl.getBoundingClientRect(), bb = r.getBBox();
