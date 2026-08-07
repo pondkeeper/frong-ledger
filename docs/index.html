@@ -12,7 +12,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -62,10 +62,12 @@
   <section class="tabpane active" id="pane-signal">
     <div class="card" id="signal">
       <div class="cardhead">
-        <div><h2>The signal — whales vs price</h2>
-          <p class="cardsub">Green bars = the 50 biggest wallets buying. Red = dumping.
-            Price on top, holder count below. Whales buying while holders climb =
-            accumulation. <span id="chartmeta"></span></p></div>
+        <div><h2>The signal — are whales buying?</h2>
+          <div class="keychips">
+            <span class="kc"><i class="sw swbuy"></i>WHALES BUYING</span>
+            <span class="kc"><i class="sw swsell"></i>WHALES DUMPING</span>
+            <span class="kc"><i class="swline"></i>PRICE</span>
+          </div></div>
         <span class="spacer"></span>
         <div class="pills" role="group" aria-label="Price scale">
           <button id="sc-lin" aria-pressed="true">linear</button>
@@ -80,30 +82,17 @@
       <div class="sig">
         <div class="siglbl">Price · USD</div>
         <div class="chartbox" id="sigprice"></div>
-        <div class="siglbl">Whale net flow · FRONG/hr</div>
+        <div class="siglbl">Whale buys − sells · per hour</div>
         <div class="chartbox" id="sigflow"></div>
-        <div class="siglbl">Holders</div>
-        <div class="chartbox" id="sigholders"></div>
       </div>
-      <div class="legend">
-        <span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-pos"/></svg> whales net buying</span>
-        <span class="key"><svg width="10" height="10"><rect width="10" height="10" rx="2" class="bar-neg"/></svg> whales net selling</span>
-        <span class="key"><svg width="14" height="4"><rect width="14" height="2" y="1" style="fill:var(--ink-2)"/></svg> holders</span>
-      </div>
+      <p class="chartfoot"><span id="chartmeta"></span></p>
     </div>
 
-    <div class="twocol">
-      <div class="card">
-        <h2>Last 24h — biggest whale moves</h2>
-        <p class="cardsub">Net position change of tracked whales over the last day.
-          Full histories in <a href="ledger.html">the ledger</a>.</p>
-        <div id="movers"></div>
-      </div>
-      <div class="card">
-        <h2>Pond census — who's actually winning</h2>
-        <p class="cardsub">The top 50 split by when they entered. Early birds vs top buyers.</p>
-        <div id="census"></div>
-      </div>
+    <div class="card" id="moves">
+      <h2>Biggest whale moves · last 24h</h2>
+      <p class="cardsub">Who bought and who dumped in the last day. Tap a wallet for its
+        full history in <a href="ledger.html">the ledger</a>.</p>
+      <div id="movers"></div>
     </div>
   </section>
 
@@ -161,6 +150,6 @@
   </footer>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

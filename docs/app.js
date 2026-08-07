@@ -400,7 +400,7 @@ function renderSignal() {
   drawLine($('sigprice'), { points: pts, height: 240, log: S.mainLog, x0, x1,
     xTicks: false, zeroBase: false, endDot: true, label: 'FRONG price' });
   const cm = $('chartmeta');
-  if (cm) cm.textContent = 'Baseline ' + fmtAgo(S.data.generated_at) + ' · live point appended.';
+  if (cm) cm.textContent = 'whale data updated ' + fmtAgo(S.data.generated_at) + ' · price line is live';
 
   const B = 3600;
   const map = new Map();
@@ -416,21 +416,11 @@ function renderSignal() {
     }
   }
   const buckets = [...map.values()].sort((a, b) => a.ts - b.ts);
-  drawBars($('sigflow'), { buckets, bucketSec: B, height: 150, x0, x1, xTicks: false,
+  drawBars($('sigflow'), { buckets, bucketSec: B, height: 180, x0, x1,
     label: 'Net whale flow per hour',
     tipFmt: b => `<b>${b.val >= 0 ? '+' : ''}${fmtAmt(b.val)} net</b><br>` +
-      `<span class="t2">▲ ${fmtAmt(b.buy)} · ▼ ${fmtAmt(b.sell)}</span><br>` +
+      `<span class="t2">▲ ${fmtAmt(b.buy)} bought · ▼ ${fmtAmt(b.sell)} sold</span><br>` +
       `<span class="t2">${fmtDT(b.ts)} UTC</span>` });
-
-  const hs = S.snaps.filter(s => s.ts >= x0).map(s => [s.ts, s.holders]);
-  if (hs.length >= 2)
-    drawLine($('sigholders'), { points: hs, height: 110, zeroBase: false, area: false,
-      lineClass: 'holderline', x0, x1, yTickN: 2, noDataBefore: hs[0][0],
-      yFmt: v => Math.round(v).toLocaleString('en-US'),
-      yTipFmt: v => Math.round(v).toLocaleString('en-US') + ' holders',
-      label: 'Holder count' });
-  else $('sigholders').innerHTML =
-    '<p class="cardsub">Holder-count trend appears here as snapshots accumulate (one every 10 min).</p>';
 
   setupSigCross();
 }
@@ -530,40 +520,27 @@ function renderMovers() {
     host.innerHTML = '<p class="cardsub">No large whale moves in the last 24h — quiet pond.</p>';
     return;
   }
+  const max = Math.max(...mv.map(m => Math.abs(m.net24)), 1);
   host.innerHTML = '<div class="mvlist">' + mv.map(m => {
     const pos = m.net24 >= 0;
     const r = S.byAddr.get(m.addr.toLowerCase());
-    return `<div class="mv">
-      <span class="side ${pos ? 'b' : 's'}">${pos ? '▲ BOUGHT' : '▼ SOLD'}</span>
-      <a class="mvaddr" href="${EXPLORER}/address/${m.addr}" target="_blank" rel="noopener">${short(m.addr)}</a>
-      ${r ? `<span class="badge">whale #${r.rank}</span>` : ''}
-      ${m.cohort === 'day_one' || m.cohort === 'sniper' ? '<span class="badge og">day one</span>' : ''}
-      <span class="mvamt ${pos ? 'pnl-pos' : 'pnl-neg'}">${pos ? '+' : '−'}${fmtAmt(Math.abs(m.net24))}</span>
-      <span class="mvusd">${fmtUsd(Math.abs(m.usd24))}</span>
+    const w = Math.max(3, Math.abs(m.net24) / max * 100);
+    return `<div class="mvitem">
+      <div class="mvrow">
+        <span class="mvside ${pos ? 'b' : 's'}">${pos ? '▲' : '▼'}</span>
+        <div class="mvwho">
+          <a class="mvaddr" href="ledger.html" title="open the ledger">${short(m.addr)}</a>
+          <span class="mvtags">${r ? `whale #${r.rank}` : 'whale'}${m.cohort === 'day_one' || m.cohort === 'sniper' ? ' · day one og' : ''}
+            · <a href="${EXPLORER}/address/${m.addr}" target="_blank" rel="noopener">explorer ↗</a></span>
+        </div>
+        <div class="mvdata">
+          <span class="mvamt ${pos ? 'pnl-pos' : 'pnl-neg'}">${pos ? '+' : '−'}${fmtAmt(Math.abs(m.net24))} FRONG</span>
+          <span class="mvusd">≈ ${fmtUsd(Math.abs(m.usd24))}</span>
+        </div>
+      </div>
+      <div class="mvbar"><i class="${pos ? 'pos' : 'neg'}" style="width:${w.toFixed(1)}%"></i></div>
     </div>`;
   }).join('') + '</div>';
-}
-
-function renderCensus() {
-  const host = $('census');
-  if (!host) return;
-  const cs = (S.data.stats && S.data.stats.cohorts) || [];
-  if (!cs.length) { host.innerHTML = '<p class="cardsub">Cohort data lands on the next refresh.</p>'; return; }
-  const px = S.livePrice || S.data.token.price;
-  const names = { sniper: 'Snipers — first 10 min', day_one: 'Day one', early: 'Day 2–3', latecomer: 'After day 3' };
-  host.innerHTML = cs.map(c => {
-    const unr = c.avg_entry ? (px - c.avg_entry) * c.balance : c.unrealized;
-    return `<div class="cen">
-      <div class="cenhead"><b>${names[c.key] || c.label}</b>
-        <span>${c.n} wallets · ${c.pct_supply.toFixed(1)}% of supply</span></div>
-      <div class="cenrows">
-        <div class="cenrow"><span>avg entry</span><b>${fmtPx(c.avg_entry)}</b></div>
-        <div class="cenrow"><span>sitting on</span><b class="${unr >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtSigned(unr)}</b></div>
-        <div class="cenrow"><span>in profit</span><b>${c.in_profit} of ${c.n}</b></div>
-        <div class="cenrow"><span>still holding</span><b>${c.held_pct == null ? '—' : c.held_pct.toFixed(0) + '% of buys'}</b></div>
-      </div>
-    </div>`;
-  }).join('');
 }
 
 function renderTable() {
@@ -714,7 +691,7 @@ function renderCharts() { renderSignal(); renderFlywheel(); }
 /* live-price refresh of computed cells without rebuilding the table */
 function refreshLiveCells() {
   S.data.wallets.forEach(liveCalc);
-  renderStats(); renderAggr(); renderVerdict(); renderMovers(); renderCensus();
+  renderStats(); renderAggr(); renderVerdict(); renderMovers();
   if (!$('tbody')) return;
   $('tbody').querySelectorAll('tr.hrow').forEach(tr => {
     const w = S.data.wallets.find(x => x.addr === tr.dataset.a);
@@ -858,7 +835,7 @@ async function boot() {
   ranked.forEach((w, i) => S.byAddr.set(w.addr.toLowerCase(), { rank: i + 1, w }));
   S.data.wallets.forEach(liveCalc);
 
-  renderStats(); renderVerdict(); renderSignal(); renderMovers(); renderCensus();
+  renderStats(); renderVerdict(); renderSignal(); renderMovers();
   renderAggr(); renderTable(); renderDiamond(); renderFlywheel(); renderInfra();
   $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at);
 
