@@ -98,7 +98,7 @@ function setTab(name, updateHash) {
   if (S.data) {
     if (name === 'signal') renderSignal();
     if (name === 'flywheel') renderFlywheel();
-    if (name === 'scanner') { const i = $('lookupaddr'); if (i) i.focus(); }
+    if (name === 'scanner' && !S.scanned) focusHeroScan();
   }
 }
 document.addEventListener('click', ev => {
@@ -789,12 +789,14 @@ async function pollPrice() {
 }
 
 /* ---------------- lookup ---------------- */
-async function lookup() {
-  const raw = $('lookupaddr').value.trim();
+async function lookup(raw) {
+  raw = (raw || '').trim();
   const msg = $('lookupmsg'), out = $('lookupresult');
   out.innerHTML = '';
   if (!/^0x[0-9a-fA-F]{40}$/.test(raw)) { msg.textContent = 'That doesn’t look like an address — expected 0x followed by 40 hex characters.'; return; }
-  const btn = $('lookupbtn'); btn.disabled = true;
+  S.scanned = true;
+  const sh = $('scanhint'); if (sh) sh.hidden = true;
+  const btn = $('heroscanbtn'); if (btn) btn.disabled = true;
   const tracked = S.byAddr.get(raw.toLowerCase());
   try {
     let w;
@@ -818,7 +820,7 @@ async function lookup() {
         url = `${BS}/addresses/${raw}/token-transfers?token=${TOKEN}&` +
           Object.entries(d.next_page_params).map(([k, v]) => `${k}=${v}`).join('&');
       }
-      if (!txs.length) { msg.textContent = 'No FRONG history found for this wallet.'; btn.disabled = false; return; }
+      if (!txs.length) { msg.textContent = 'No FRONG history found for this wallet.'; if (btn) btn.disabled = false; return; }
       txs.sort((a, b) => a.ts - b.ts);
       let bal = 0;
       try {
@@ -862,21 +864,28 @@ async function lookup() {
   } catch (e) {
     msg.textContent = 'Couldn’t reach the chain indexer — try again in a few seconds.';
   }
-  btn.disabled = false;
+  if (btn) btn.disabled = false;
 }
-if ($('lookupbtn')) {
-  $('lookupbtn').addEventListener('click', lookup);
-  $('lookupaddr').addEventListener('keydown', ev => { if (ev.key === 'Enter') lookup(); });
+function focusHeroScan() {
+  const hs = $('heroscan');
+  if (!hs) return;
+  hs.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('heroaddr').focus({ preventScroll: true });
+  hs.classList.add('pulse');
+  setTimeout(() => hs.classList.remove('pulse'), 2400);
 }
 if ($('heroscan')) {
   $('heroscan').addEventListener('submit', ev => {
     ev.preventDefault();
     const v = $('heroaddr').value.trim();
     setTab('scanner');
-    const la = $('lookupaddr');
-    if (la) la.value = v;
-    $('pane-scanner').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    if (v && S.data) lookup();
+    if (v && S.data) {
+      $('pane-scanner').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      lookup(v);
+    } else focusHeroScan();
+  });
+  document.addEventListener('click', ev => {
+    if (ev.target.closest('[data-action="heroscan"]')) focusHeroScan();
   });
 }
 
