@@ -28,4 +28,3 @@ jobs:
           git diff --cached --quiet || git commit -m "data refresh $(date -u +%Y-%m-%dT%H:%MZ)"
           git push
 
-# maintained by pondkeeper
