@@ -61,11 +61,18 @@ const fmtAgo = ts => {
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const $ = id => document.getElementById(id);
 
-/* ---------------- hero video: respect reduced motion ---------------- */
+/* ---------------- hero video: respect reduced motion, rescue mobile autoplay ---------------- */
 {
   const v = $('camvid');
   if (v && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     v.removeAttribute('autoplay'); v.pause();
+  } else if (v) {
+    // iOS/Android sometimes block or delay autoplay (low-power mode, data saver):
+    // retry when playable and again on the first user gesture.
+    const tryPlay = () => { if (v.paused) v.play().catch(() => {}); };
+    v.addEventListener('canplay', tryPlay, { once: true });
+    ['touchstart', 'pointerdown', 'scroll'].forEach(e =>
+      document.addEventListener(e, tryPlay, { once: true, passive: true }));
   }
   const hc = $('hudclock');
   if (hc) {
@@ -99,6 +106,10 @@ document.addEventListener('click', ev => {
   if (!b) return;
   ev.preventDefault();
   setTab(b.dataset.tab);
+  if (b.dataset.scroll) {
+    const t = $(b.dataset.scroll);
+    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 });
 window.addEventListener('hashchange', () => setTab(location.hash.slice(1), false));
 if ($('pane-signal')) setTab(location.hash.slice(1) || 'signal', false);
@@ -419,7 +430,7 @@ function renderSignal() {
   const all = mainChartPoints();
   let pts = all.filter(p => p[0] >= x0 - 1800);
   if (pts.length < 2) pts = all.slice(-2);
-  drawLine($('sigprice'), { points: pts, height: 240, log: S.mainLog, x0, x1,
+  drawLine($('sigprice'), { points: pts, height: 240, x0, x1,
     xTicks: false, zeroBase: false, endDot: true, label: 'FRONG price' });
   const cm = $('chartmeta');
   if (cm) cm.textContent = 'whale data updated ' + fmtAgo(S.data.generated_at) + ' · price line is live';
@@ -530,7 +541,7 @@ function renderVerdict() {
   el.innerHTML = `<span class="vmain">${head}</span>
     <span class="vsub">${net >= 0 ? '+' : ''}${fmtAmt(net)} FRONG net in 24h (≈${fmtUsd(Math.abs(net) * px)})
       · ${buyers} buying vs ${sellers} selling
-      · <a href="#signal" data-tab="signal">see the tape ↓</a></span>`;
+      · <a href="#signal" data-tab="signal" data-scroll="signal">see the tape ↓</a></span>`;
 }
 
 function renderMovers() {
@@ -870,14 +881,6 @@ if ($('heroscan')) {
 }
 
 /* ---------------- controls ---------------- */
-if ($('sc-lin')) {
-  $('sc-lin').addEventListener('click', () => { S.mainLog = false; syncScale(); renderSignal(); });
-  $('sc-log').addEventListener('click', () => { S.mainLog = true; syncScale(); renderSignal(); });
-}
-function syncScale() {
-  $('sc-lin').setAttribute('aria-pressed', String(!S.mainLog));
-  $('sc-log').setAttribute('aria-pressed', String(S.mainLog));
-}
 if ($('flowrange'))
   $('flowrange').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     S.flowHours = +b.dataset.h;
