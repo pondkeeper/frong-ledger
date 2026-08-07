@@ -116,6 +116,7 @@ function priceAt(ts) {
 const isIn = (t, addr) => t.to.toLowerCase() === addr.toLowerCase();
 
 /* ---------------- generic charts ---------------- */
+let GID = 0; // unique ids for per-chart svg defs
 function chartW(host) {
   const w = host.clientWidth || host.parentElement?.clientWidth || 1000;
   return Math.max(480, Math.min(1000, w));
@@ -138,9 +139,7 @@ function drawLine(host, opts) {
   const Y = v => log
     ? M.t + ih - (Math.log(v) - Math.log(yMin)) / (Math.log(yMax) - Math.log(yMin)) * ih
     : M.t + ih - (v - yMin) / Math.max(1e-12, yMax - yMin) * ih;
-  const yFmt = opts.yFmt || (v => fmtPx(v).slice(1));
-
-  let yTicks = [];
+  let yTicks = [], tickDec = 4;
   if (log) {
     for (let e = -6; e <= 2; e++) for (const m of [1, 2, 5]) {
       const v = m * Math.pow(10, e);
@@ -148,12 +147,24 @@ function drawLine(host, opts) {
     }
     if (yTicks.length > 6) yTicks = yTicks.filter((_, i) => i % 2 === 0);
   } else {
-    const step = niceStep((yMax - Math.min(0, yMin)) / (opts.yTickN || 4));
+    const lo = opts.zeroBase === false ? yMin : Math.min(0, yMin);
+    const step = niceStep((yMax - lo) / (opts.yTickN || 4));
     for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) yTicks.push(v);
+    tickDec = Math.max(0, Math.ceil(-Math.log10(step)));
+    if (step * Math.pow(10, tickDec) % 1 > 1e-9) tickDec++;
+    tickDec = Math.min(6, tickDec);
   }
+  const yFmt = opts.yFmt || (log
+    ? (v => parseFloat(v.toPrecision(2)).toString())
+    : (v => v.toFixed(tickDec)));
   const xTicks = xTickList(x0, x1);
+  const gid = ++GID;
 
   let g = '';
+  for (const [t] of xTicks) {
+    const x = X(t);
+    g += `<line class="gridline" x1="${x.toFixed(1)}" y1="${M.t}" x2="${x.toFixed(1)}" y2="${M.t + ih}"/>`;
+  }
   for (const v of yTicks) {
     const y = Y(v);
     g += `<line class="gridline" x1="${M.l}" y1="${y}" x2="${W - M.r}" y2="${y}"/>`
@@ -166,10 +177,33 @@ function drawLine(host, opts) {
 
   const cls = opts.lineClass || 'priceline';
   const lineD = pts.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join('');
-  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || 'chart')}">` + g;
-  if (opts.area !== false && cls === 'priceline')
-    svg += `<path class="pricearea" d="${lineD}L${X(x1).toFixed(1)} ${M.t + ih}L${X(x0).toFixed(1)} ${M.t + ih}Z"/>`;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || 'chart')}">`;
+  // no-data region: hatched "NO FEED" zone (tracking hasn't covered this span yet)
+  if (opts.noDataBefore && opts.noDataBefore > x0 + (x1 - x0) * 0.04) {
+    const nx = X(Math.min(opts.noDataBefore, x1));
+    svg += `<defs><pattern id="hp${gid}" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="7" stroke="rgba(214,228,200,.09)" stroke-width="2.5"/></pattern></defs>`
+      + `<rect x="${M.l}" y="${M.t}" width="${(nx - M.l).toFixed(1)}" height="${ih}" fill="url(#hp${gid})"/>`;
+    if (nx - M.l > 150)
+      svg += `<text class="nofeed" x="${(M.l + (nx - M.l) / 2).toFixed(1)}" y="${M.t + ih / 2 + 3}" text-anchor="middle">`
+        + `NO FEED — TRACKING SINCE ${esc(fmtDT(opts.noDataBefore).toUpperCase())} UTC</text>`;
+  }
+  svg += g;
+  if (opts.area !== false && cls === 'priceline') {
+    svg += `<defs><linearGradient id="ag${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--accent)" stop-opacity=".18"/>
+      <stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>`
+      + `<path fill="url(#ag${gid})" d="${lineD}L${X(pts[pts.length - 1][0]).toFixed(1)} ${M.t + ih}L${X(pts[0][0]).toFixed(1)} ${M.t + ih}Z"/>`;
+  }
   svg += `<path class="${cls}" d="${lineD}"/>`;
+  if (opts.endDot) {
+    const lp = pts[pts.length - 1];
+    const ex = Math.min(X(lp[0]), W - M.r - 3), ey = Y(lp[1]);
+    const ly = Math.max(M.t + 14, ey - 11);
+    svg += `<circle class="enddot-halo" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="7"/>`
+      + `<circle class="enddot" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5"/>`
+      + `<text class="endlbl" x="${(ex - 10).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="end">${esc(fmtPx(lp[1]))}</text>`;
+  }
 
   if (opts.refY != null && opts.refY > yMin && opts.refY < yMax) {
     const ry = Y(opts.refY);
@@ -246,6 +280,10 @@ function drawBars(host, opts) {
   const yFmt = opts.yFmt || fmtAmt;
 
   let g = '';
+  for (const [t] of xTickList(x0, x1)) {
+    const x = X(t);
+    g += `<line class="gridline" x1="${x.toFixed(1)}" y1="${M.t}" x2="${x.toFixed(1)}" y2="${M.t + ih}"/>`;
+  }
   const step = niceStep(maxAbs / 2);
   for (let v = diverging ? -Math.floor(maxAbs / step) * step : 0; v <= maxAbs; v += step) {
     const y = Y(v);
@@ -360,7 +398,7 @@ function renderSignal() {
   let pts = all.filter(p => p[0] >= x0 - 1800);
   if (pts.length < 2) pts = all.slice(-2);
   drawLine($('sigprice'), { points: pts, height: 240, log: S.mainLog, x0, x1,
-    xTicks: false, zeroBase: false, label: 'FRONG price' });
+    xTicks: false, zeroBase: false, endDot: true, label: 'FRONG price' });
   const cm = $('chartmeta');
   if (cm) cm.textContent = 'Baseline ' + fmtAgo(S.data.generated_at) + ' · live point appended.';
 
@@ -385,17 +423,40 @@ function renderSignal() {
       `<span class="t2">${fmtDT(b.ts)} UTC</span>` });
 
   const hs = S.snaps.filter(s => s.ts >= x0).map(s => [s.ts, s.holders]);
-  if (hs.length >= 2) {
-    drawLine($('sigholders'), { points: hs, height: 96, zeroBase: false, area: false,
-      lineClass: 'holderline', x0, x1, yTickN: 2,
+  if (hs.length >= 2)
+    drawLine($('sigholders'), { points: hs, height: 110, zeroBase: false, area: false,
+      lineClass: 'holderline', x0, x1, yTickN: 2, noDataBefore: hs[0][0],
       yFmt: v => Math.round(v).toLocaleString('en-US'),
       yTipFmt: v => Math.round(v).toLocaleString('en-US') + ' holders',
       label: 'Holder count' });
-    if (hs[0][0] - x0 > (x1 - x0) * 0.25)
-      $('sigholders').insertAdjacentHTML('beforeend',
-        `<div class="signote">tracking since ${fmtDT(hs[0][0])} UTC — fills in over time</div>`);
-  } else $('sigholders').innerHTML =
+  else $('sigholders').innerHTML =
     '<p class="cardsub">Holder-count trend appears here as snapshots accumulate (one every 10 min).</p>';
+
+  setupSigCross();
+}
+
+/* one crosshair spanning all three signal panels */
+function setupSigCross() {
+  const sig = document.querySelector('.sig');
+  if (!sig || sig.dataset.cross) return;
+  sig.dataset.cross = '1';
+  const line = document.createElement('div');
+  line.className = 'sigcross';
+  sig.appendChild(line);
+  sig.addEventListener('mousemove', ev => {
+    const svg = sig.querySelector('svg');
+    if (!svg) return;
+    const r = sig.getBoundingClientRect(), sr = svg.getBoundingClientRect();
+    const vw = svg.viewBox.baseVal.width || sr.width;
+    const scale = sr.width / vw;
+    const left = sr.left - r.left + 56 * scale;
+    const right = sr.left - r.left + sr.width - 14 * scale;
+    const x = ev.clientX - r.left;
+    if (x < left || x > right) { line.style.display = 'none'; return; }
+    line.style.left = x + 'px';
+    line.style.display = 'block';
+  });
+  sig.addEventListener('mouseleave', () => { line.style.display = 'none'; });
 }
 
 function renderAggr() {
