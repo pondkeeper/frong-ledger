@@ -98,7 +98,7 @@ function setTab(name, updateHash) {
   if (S.data) {
     if (name === 'signal') renderSignal();
     if (name === 'flywheel') renderFlywheel();
-    if (name === 'scanner' && !S.scanned) focusHeroScan();
+    if (name === 'scanner') { const i = $('lookupaddr'); if (i) i.focus({ preventScroll: true }); }
   }
 }
 document.addEventListener('click', ev => {
@@ -794,9 +794,7 @@ async function lookup(raw) {
   const msg = $('lookupmsg'), out = $('lookupresult');
   out.innerHTML = '';
   if (!/^0x[0-9a-fA-F]{40}$/.test(raw)) { msg.textContent = 'That doesn’t look like an address — expected 0x followed by 40 hex characters.'; return; }
-  S.scanned = true;
-  const sh = $('scanhint'); if (sh) sh.hidden = true;
-  const btn = $('heroscanbtn'); if (btn) btn.disabled = true;
+  const btn = $('lookupbtn'); if (btn) btn.disabled = true;
   const tracked = S.byAddr.get(raw.toLowerCase());
   try {
     let w;
@@ -866,26 +864,10 @@ async function lookup(raw) {
   }
   if (btn) btn.disabled = false;
 }
-function focusHeroScan() {
-  const hs = $('heroscan');
-  if (!hs) return;
-  hs.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  $('heroaddr').focus({ preventScroll: true });
-  hs.classList.add('pulse');
-  setTimeout(() => hs.classList.remove('pulse'), 2400);
-}
-if ($('heroscan')) {
-  $('heroscan').addEventListener('submit', ev => {
-    ev.preventDefault();
-    const v = $('heroaddr').value.trim();
-    setTab('scanner');
-    if (v && S.data) {
-      $('pane-scanner').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      lookup(v);
-    } else focusHeroScan();
-  });
-  document.addEventListener('click', ev => {
-    if (ev.target.closest('[data-action="heroscan"]')) focusHeroScan();
+if ($('lookupbtn')) {
+  $('lookupbtn').addEventListener('click', () => lookup($('lookupaddr').value));
+  $('lookupaddr').addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') lookup($('lookupaddr').value);
   });
 }
 

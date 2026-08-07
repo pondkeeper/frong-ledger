@@ -12,7 +12,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -38,11 +38,8 @@
     <p class="tagline">THE CAMERA POINTED AT THE 50 BIGGEST FRONG WALLETS
       <a class="method" href="methodology.html">HOW →</a></p>
     <div class="verdict" id="verdict" aria-live="polite"></div>
-    <form class="heroscan" id="heroscan">
-      <input id="heroaddr" placeholder="0x… paste any wallet — PnL in 5 seconds" spellcheck="false"
-             autocomplete="off" aria-label="Wallet address">
-      <button class="btn" type="submit" id="heroscanbtn">Scan</button>
-    </form>
+    <button class="btn heroscan-cta" data-tab="scanner" data-scroll="lookup">
+      🔍 Scan your wallet — PnL in 5 seconds</button>
     <div class="hudstats" id="stats" aria-label="Market stats"></div>
   </div>
 </section>
@@ -99,12 +96,14 @@
 
   <section class="tabpane" id="pane-scanner">
     <div class="card scan" id="lookup">
-      <h2>Wallet scan results</h2>
-      <p class="cardsub">Cost basis, live PnL and the full trade history plotted on the price
-        curve — rebuilt in your browser from on-chain data. Works for any FRONG wallet, not just whales.</p>
-      <div class="scanhint" id="scanhint">
-        <p>No scan yet. Paste any wallet address in the scan bar at the top of the page.</p>
-        <button class="btn" data-action="heroscan">⌃ Take me to the scan bar</button>
+      <h2>Scan any wallet</h2>
+      <p class="cardsub">Paste an address — cost basis, live PnL and the full trade history
+        plotted on the price curve, rebuilt in your browser from on-chain data. Works for any
+        FRONG wallet, not just whales.</p>
+      <div class="lookupform">
+        <input id="lookupaddr" placeholder="0x… wallet address" spellcheck="false"
+               autocomplete="off" aria-label="Wallet address">
+        <button class="btn" id="lookupbtn">Scan</button>
       </div>
       <div class="lookupmsg" id="lookupmsg"></div>
       <div id="lookupresult"></div>
@@ -148,6 +147,6 @@
   </footer>
 </div>
 
-<script src="app.js?v=12"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>
