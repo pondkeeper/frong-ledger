@@ -156,10 +156,14 @@ def price_at(ts):
 cur_price, fdv, liq, vol24, chg24 = None, None, None, None, None
 ds = get(f"{DS}/{TOKEN}")
 if ds and ds.get("pairs"):
-    p = max(ds["pairs"], key=lambda x: x["liquidity"]["usd"])
-    cur_price = float(p["priceUsd"]); fdv = p.get("fdv"); liq = p["liquidity"]["usd"]
-    chg24 = p["priceChange"].get("h24")
-    vol24 = sum(x["volume"]["h24"] for x in ds["pairs"])
+    # new pairs can appear without liquidity/volume/priceChange fields
+    liq_of = lambda x: ((x.get("liquidity") or {}).get("usd")) or 0
+    pairs = [x for x in ds["pairs"] if liq_of(x) > 0]
+    if pairs:
+        p = max(pairs, key=liq_of)
+        cur_price = float(p["priceUsd"]); fdv = p.get("fdv"); liq = liq_of(p)
+        chg24 = (p.get("priceChange") or {}).get("h24")
+        vol24 = sum((x.get("volume") or {}).get("h24") or 0 for x in ds["pairs"])
 if cur_price is None:
     cur_price = all_candles[-1][1] if all_candles else 0.0
 tok = get(f"{BS}/tokens/{TOKEN}") or {}
