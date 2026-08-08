@@ -177,8 +177,12 @@ pages = 0
 while d and pages < 5:
     for h in d.get("items", []):
         a = h["address"]
+        # Robinhood app wallets are EOAs with EIP-7702 delegated code; Blockscout flags
+        # them is_contract, but they are users, not infra — rank them with the EOAs.
+        aa = a.get("proxy_type") == "eip7702"
         row = {"addr": a["hash"], "name": a.get("name") or KNOWN.get(a["hash"].lower()),
-               "balance": int(h["value"]) / 1e18, "is_contract": bool(a.get("is_contract"))}
+               "balance": int(h["value"]) / 1e18,
+               "is_contract": bool(a.get("is_contract")) and not aa, "aa": aa}
         (contracts_top if row["is_contract"] else ranked).append(row)
     np = d.get("next_page_params")
     pages += 1
@@ -240,7 +244,7 @@ def compute(addr, txs, balance):
     }
 
 wallets_out = []
-work = [(w["addr"], w["balance"]) for w in top]
+work = [(w["addr"], w["balance"], w.get("aa", False)) for w in top]
 # keep previously-tracked wallets that fell out of top-N (up to cap)
 for a, w in tracked.items():
     if a not in top_addrs and len(work) < TRACK_CAP:
@@ -251,10 +255,10 @@ for a, w in tracked.items():
             for tb in r or []:
                 if tb["token"]["address_hash"].lower() == TOKEN.lower():
                     bal = int(tb["value"]) / 1e18
-        work.append((w["addr"], bal))
+        work.append((w["addr"], bal, w.get("aa", False)))
 
 def process_wallet(item):
-    i, (addr, bal) = item
+    i, (addr, bal, aa) = item
     prior = tracked.get(addr.lower())
     txs, trunc = refresh_wallet(addr, prior)
     stats = compute(addr, txs, bal)
@@ -262,7 +266,7 @@ def process_wallet(item):
     n_new = len(txs) - (len(prior["txs"]) if prior else 0)
     if n_new or not prior:
         print(f"  [{i+1}/{len(work)}] {addr[:10]} +{n_new} txs (total {len(txs)})")
-    return {"addr": addr, "in_top": addr.lower() in top_addrs, **stats, "txs": txs}
+    return {"addr": addr, "in_top": addr.lower() in top_addrs, "aa": aa, **stats, "txs": txs}
 
 with ThreadPoolExecutor(max_workers=6) as pool:
     wallets_out = [w for w in pool.map(process_wallet, enumerate(work)) if w]
@@ -341,7 +345,8 @@ for w in top_set:
     n24 = net_flow(w, now - 86400)
     if abs(n24) * cur_price >= 200:      # ignore dust
         movers.append({"addr": w["addr"], "net24": n24, "usd24": n24 * cur_price,
-                       "balance": w["balance"], "cohort": w["cohort"]})
+                       "balance": w["balance"], "cohort": w["cohort"],
+                       "aa": w.get("aa", False)})
 movers.sort(key=lambda m: -abs(m["net24"]))
 movers = movers[:12]
 

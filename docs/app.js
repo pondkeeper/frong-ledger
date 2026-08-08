@@ -789,6 +789,40 @@ async function pollPrice() {
 }
 
 /* ---------------- lookup ---------------- */
+/* An address with no FRONG history can still show up as the "maker" of big
+   FRONG trades on DEX trackers: every Robinhood in-app trade is submitted
+   on-chain by an ERC-4337 relayer (bundler), so trackers attribute the trade
+   to the relayer instead of the actual wallet. Identify those on lookup. */
+/* Blockscout intermittently returns 500s on address endpoints — retry a couple
+   of times before falling back, or bundlers would randomly classify as unknown. */
+async function bsJson(url, tries = 3) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const d = await (await fetch(url)).json();
+      if (d && typeof d === 'object') return d;
+    } catch (e) { /* retry */ }
+    await new Promise(res => setTimeout(res, 700));
+  }
+  return null;
+}
+
+async function classifyEmpty(addr) {
+  const fallback = 'No FRONG history found for this wallet.';
+  const a = await bsJson(`${BS}/addresses/${addr}`);
+  if (a && a.proxy_type === 'eip7702')
+    return 'This is a Robinhood app wallet (EIP-7702 smart account) — no FRONG history yet.';
+  const d = await bsJson(`${BS}/addresses/${addr}/transactions`);
+  const items = (d && d.items) || [];
+  const ops = items.filter(t => t.method === 'handleOps' &&
+    t.from && t.from.hash && t.from.hash.toLowerCase() === addr.toLowerCase()).length;
+  if (ops >= 3 && ops >= items.length / 2)
+    return 'This address is a transaction relayer (ERC-4337 bundler), not a trader. ' +
+      'It submits other wallets’ trades, so DEX trackers list it as the “maker” — ' +
+      'but it never holds or trades FRONG itself.';
+  if (a && a.is_contract === true) return 'Smart contract — no FRONG history.';
+  return fallback;
+}
+
 async function lookup(raw) {
   raw = (raw || '').trim();
   const msg = $('lookupmsg'), out = $('lookupresult');
@@ -798,7 +832,11 @@ async function lookup(raw) {
   const tracked = S.byAddr.get(raw.toLowerCase());
   try {
     let w;
-    if (tracked) { w = tracked.w; msg.textContent = `Tracked whale — rank #${tracked.rank} by balance.`; }
+    if (tracked) {
+      w = tracked.w;
+      msg.textContent = `Tracked whale — rank #${tracked.rank} by balance.` +
+        (w.aa ? ' Robinhood app wallet (EIP-7702).' : '');
+    }
     else {
       msg.textContent = 'Fetching transfer history…';
       const txs = []; let truncated = false;
@@ -818,7 +856,11 @@ async function lookup(raw) {
         url = `${BS}/addresses/${raw}/token-transfers?token=${TOKEN}&` +
           Object.entries(d.next_page_params).map(([k, v]) => `${k}=${v}`).join('&');
       }
-      if (!txs.length) { msg.textContent = 'No FRONG history found for this wallet.'; if (btn) btn.disabled = false; return; }
+      if (!txs.length) {
+        msg.textContent = 'No FRONG history — identifying the address…';
+        msg.textContent = await classifyEmpty(raw);
+        if (btn) btn.disabled = false; return;
+      }
       txs.sort((a, b) => a.ts - b.ts);
       let bal = 0;
       try {
@@ -843,7 +885,9 @@ async function lookup(raw) {
       w = { addr: raw, balance: bal, avg_entry, realized, buy_usd, sell_usd,
         n_txs: txs.length, txs, truncated, first_ts: txs[0].ts,
         balance_mismatch: false, in_top: false };
-      msg.textContent = truncated ? 'Showing the most recent 400 transfers — older history omitted, so cost basis is approximate.' : '';
+      const ainfo = await bsJson(`${BS}/addresses/${raw}`, 2);
+      const aaNote = (ainfo && ainfo.proxy_type === 'eip7702') ? 'Robinhood app wallet (EIP-7702). ' : '';
+      msg.textContent = aaNote + (truncated ? 'Showing the most recent 400 transfers — older history omitted, so cost basis is approximate.' : '');
     }
     liveCalc(w);
     const px = S.livePrice || S.data.token.price;
