@@ -750,9 +750,14 @@ function renderBurn() {
   const tot = bv.reduce((s, b) => s + b.frong, 0);
   const machine = bv.filter(b => b.machine).length;
   const last = bv.length ? bv[bv.length - 1].ts : null;
+  const st = S.data.stats || {};
+  const pend = st.pending_fee_eth, ethUsd = st.eth_usd;
   $('burntiles').innerHTML = [
     ['Burned so far', fmtAmt(tot) + `<span class="delta">${(tot / SUPPLY * 100).toFixed(2)}% of supply</span>`],
     ['Worth right now', fmtUsd(tot * px)],
+    ['Waiting to burn', pend != null
+      ? pend.toFixed(3) + ' ETH' + (ethUsd ? `<span class="delta">${fmtUsd(pend * ethUsd)} in fees queued</span>` : '')
+      : '—'],
     ['Burns', String(bv.length) + (machine ? `<span class="delta">${machine} by the machine</span>` : '')],
     ['Last burn', last ? fmtAgo(last) : '—'],
   ].map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="val">${v}</div></div>`).join('');

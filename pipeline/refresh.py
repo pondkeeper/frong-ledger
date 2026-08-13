@@ -307,6 +307,47 @@ burns += new_b
 burned_frong = sum(b["frong"] for b in burns)
 print(f"burns: +{len(new_b)} new, total {len(burns)} | cumulative {burned_frong/1e6:.2f}M FRONG burned")
 
+# ---------------- pending fees (ETH queued for the burn machine, not burned yet) ----------------
+# amounts(uint256) on each stage of the pipeline: FEEB vault (accruing) ->
+# VestingClaimRecipient (dripping) -> BuybackAndBurn (claimable by searchers).
+RPC = "https://rpc.mainnet.chain.robinhood.com"
+FEE_TOKEN_ID = 409801  # FRONG's fee-NFT / v4 position id
+AMOUNTS_SEL = "0x45f0a44f"
+FEE_CONTRACTS = [
+    "0x587D2fDDDF14F6f84022b51e8c3a473eB88C4544",
+    "0xeF451B293ED8C61d20f7d13ef336a496F0cc2c26",
+    "0xa1ba4CC12654D2b188e3ba77dc86c75cA47f1A4e",
+]
+
+def rpc_amounts0(contract):
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_call",
+                       "params": [{"to": contract,
+                                   "data": AMOUNTS_SEL + hex(FEE_TOKEN_ID)[2:].zfill(64)},
+                                  "latest"]}).encode()
+    req = urllib.request.Request(RPC, data=body,
+                                 headers={"Content-Type": "application/json",
+                                          "User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return int(json.load(r)["result"][2:66], 16) / 1e18
+
+try:
+    pending_eth = sum(rpc_amounts0(c) for c in FEE_CONTRACTS)
+except Exception as e:
+    print(f"  pending-fee read failed ({e}); keeping previous", file=sys.stderr)
+    pending_eth = state.get("stats", {}).get("pending_fee_eth")
+
+eth_usd = None
+cb = get("https://api.coinbase.com/v2/prices/ETH-USD/spot")
+if cb:
+    try:
+        eth_usd = float(cb["data"]["amount"])
+    except Exception:
+        pass
+if eth_usd is None:
+    eth_usd = state.get("stats", {}).get("eth_usd")
+print(f"pending fees: {pending_eth:.4f} ETH | ETH ${eth_usd}" if pending_eth is not None
+      else "pending fees: unknown")
+
 # ---------------- derived intelligence ----------------
 # Everything below is additive: the frontend can ignore it safely.
 LAUNCH_TS = (candles1h or candles5 or [[now, 0]])[0][0]
@@ -391,6 +432,8 @@ stats_block = {
     "whale_net24": sum(m["net24"] for m in movers),
     "locked_frong": locked_frong,
     "burned_frong": burned_frong,
+    "pending_fee_eth": pending_eth,
+    "eth_usd": eth_usd,
 }
 print(f"intel: {len(cohort_stats)} cohorts | {len(movers)} movers | top10 {concentration['top10']:.1f}% "
       f"| +{len(concentration['entered'])}/-{len(concentration['exited'])} top-50 churn")
