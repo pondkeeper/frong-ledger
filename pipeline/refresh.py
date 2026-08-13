@@ -103,6 +103,7 @@ tracked = {w["addr"].lower(): w for w in state.get("wallets", [])}
 candles5 = state.get("candles5", [])   # recent 5-min [ts,o,h,l,c? -> we keep [ts,c]]
 candles1h = state.get("candles1h", []) # compacted hourly [ts,c]
 harvests = state.get("harvests", [])
+burns = state.get("burns", [])
 
 now = int(time.time())
 print(f"== refresh @ {now} | tracked wallets: {len(tracked)} ==")
@@ -286,6 +287,26 @@ harvests += new_h
 locked_frong = sum(h["frong"] for h in harvests)
 print(f"harvests: +{len(new_h)} new, total {len(harvests)} | cumulative {locked_frong/1e6:.1f}M FRONG recycled")
 
+# ---------------- burns (buyback machine live since 2026-08-12) ----------------
+# Machine burns are exactly 500k FRONG per claim (BuybackAndBurnClaimRecipient.minCurrency1BurnAmount);
+# anything else sent to the dead address is a community/dust burn.
+DEAD = "0x000000000000000000000000000000000000dEaD"
+MACHINE_BURN = 500000.0
+last_b = burns[-1]["ts"] if burns else 0
+new_b = []
+for it in paginate(f"{BS}/addresses/{DEAD}/token-transfers?token={TOKEN}", 10,
+                   lambda it: iso2ts(it["timestamp"]) <= last_b):
+    if it.get("__truncated__"):
+        continue
+    t = norm_transfer(it, KNOWN)
+    if t and t["to"].lower() == DEAD.lower():
+        new_b.append({"ts": t["ts"], "frong": t["amount"], "tx": t["tx"],
+                      "machine": abs(t["amount"] - MACHINE_BURN) < 1})
+new_b.sort(key=lambda x: x["ts"])
+burns += new_b
+burned_frong = sum(b["frong"] for b in burns)
+print(f"burns: +{len(new_b)} new, total {len(burns)} | cumulative {burned_frong/1e6:.2f}M FRONG burned")
+
 # ---------------- derived intelligence ----------------
 # Everything below is additive: the frontend can ignore it safely.
 LAUNCH_TS = (candles1h or candles5 or [[now, 0]])[0][0]
@@ -369,6 +390,7 @@ stats_block = {
     "concentration": concentration,
     "whale_net24": sum(m["net24"] for m in movers),
     "locked_frong": locked_frong,
+    "burned_frong": burned_frong,
 }
 print(f"intel: {len(cohort_stats)} cohorts | {len(movers)} movers | top10 {concentration['top10']:.1f}% "
       f"| +{len(concentration['entered'])}/-{len(concentration['exited'])} top-50 churn")
@@ -386,6 +408,7 @@ out = {
     "candles5": candles5,
     "candles1h": candles1h,
     "harvests": harvests,
+    "burns": burns,
     "stats": stats_block,
 }
 os.makedirs(os.path.dirname(DATA), exist_ok=True)
@@ -400,6 +423,7 @@ snap = {
     "in_profit": sum(1 for w in top_set if (w["unrealized"] or 0) > 0),
     "top10": concentration["top10"],
     "locked_frong": locked_frong,
+    "burned_frong": burned_frong,
 }
 with open(SNAPS, "a") as f:
     f.write(json.dumps(snap) + "\n")

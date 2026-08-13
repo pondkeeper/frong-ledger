@@ -50,7 +50,7 @@
     <button role="tab" data-tab="signal" aria-selected="true">📡 The Signal</button>
     <button role="tab" data-tab="scanner" aria-selected="false">🔍 Scan your wallet</button>
     <button role="tab" data-tab="diamond" aria-selected="false">💎 Diamond hands</button>
-    <button role="tab" data-tab="flywheel" aria-selected="false">🔄 Flywheel</button>
+    <button role="tab" data-tab="flywheel" aria-selected="false">🔄 Flywheel · 🔥 Burn</button>
     <a class="tablink" href="ledger.html">📒 The Ledger · all 50 whales ↗</a>
   </nav>
 
@@ -124,11 +124,20 @@
   <section class="tabpane" id="pane-flywheel">
     <div class="card" id="flywheel">
       <h2>The flywheel — liquidity only goes up</h2>
-      <p class="cardsub">FRONG's trading fees never get cashed out. Every harvest is re-deposited
+      <p class="cardsub">Most of FRONG's trading fees never get cashed out. Every harvest is re-deposited
         into the pool and the LP is burned forever. More trading → deeper pool. Nobody can pull it.</p>
       <div class="fw-tiles" id="fwtiles"></div>
       <div class="siglbl">FRONG locked into the pool · running total</div>
       <div class="chartbox" id="fwchart"></div>
+    </div>
+    <div class="card" id="burncard">
+      <h2>The burn machine — supply only goes down</h2>
+      <p class="cardsub">Since Aug 12, 2026 the creator's fee share is renounced: it drips out as ETH
+        that anyone can claim only by burning 500k FRONG per claim. Burned coins sit at the dead
+        address forever. Nobody can mint more.</p>
+      <div class="fw-tiles" id="burntiles"></div>
+      <div class="siglbl">FRONG burned · running total</div>
+      <div class="chartbox" id="burnchart"></div>
     </div>
   </section>
 

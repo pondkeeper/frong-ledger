@@ -97,7 +97,7 @@ function setTab(name, updateHash) {
   if (updateHash !== false) history.replaceState(null, '', '#' + name);
   if (S.data) {
     if (name === 'signal') renderSignal();
-    if (name === 'flywheel') renderFlywheel();
+    if (name === 'flywheel') { renderFlywheel(); renderBurn(); }
     if (name === 'scanner') { const i = $('lookupaddr'); if (i) i.focus({ preventScroll: true }); }
   }
 }
@@ -743,6 +743,30 @@ function renderFlywheel() {
       label: 'Cumulative FRONG locked into the pool' });
 }
 
+function renderBurn() {
+  if (!$('burntiles')) return;
+  const bv = (S.data.burns || []).slice().sort((a, b) => a.ts - b.ts);
+  const px = S.livePrice || S.data.token.price;
+  const tot = bv.reduce((s, b) => s + b.frong, 0);
+  const machine = bv.filter(b => b.machine).length;
+  const last = bv.length ? bv[bv.length - 1].ts : null;
+  $('burntiles').innerHTML = [
+    ['Burned so far', fmtAmt(tot) + `<span class="delta">${(tot / SUPPLY * 100).toFixed(2)}% of supply</span>`],
+    ['Worth right now', fmtUsd(tot * px)],
+    ['Burns', String(bv.length) + (machine ? `<span class="delta">${machine} by the machine</span>` : '')],
+    ['Last burn', last ? fmtAgo(last) : '—'],
+  ].map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="val">${v}</div></div>`).join('');
+  if (!bv.length) { $('burnchart').innerHTML = ''; return; }
+  let cum = 0;
+  const pts = bv.map(b => (cum += b.frong, [b.ts, cum]));
+  pts.push([Math.floor(Date.now() / 1000), cum]);
+  if (pts.length >= 2)
+    drawLine($('burnchart'), { points: pts, height: 200,
+      yFmt: fmtAmt, endDot: true, endFmt: v => fmtAmt(v) + ' FRONG',
+      yTipFmt: v => fmtAmt(v) + ' FRONG burned forever',
+      label: 'Cumulative FRONG burned' });
+}
+
 function renderInfra() {
   if (!$('infra')) return;
   $('infra').innerHTML = (S.data.contracts_top || []).map(c => {
@@ -751,7 +775,7 @@ function renderInfra() {
   }).join('');
 }
 
-function renderCharts() { renderSignal(); renderFlywheel(); }
+function renderCharts() { renderSignal(); renderFlywheel(); renderBurn(); }
 
 /* live-price refresh of computed cells without rebuilding the table */
 function refreshLiveCells() {
@@ -940,7 +964,7 @@ async function boot() {
   S.data.wallets.forEach(liveCalc);
 
   renderStats(); renderVerdict(); renderSignal(); renderMovers(); renderApex();
-  renderAggr(); renderTable(); renderDiamond(); renderFlywheel(); renderInfra();
+  renderAggr(); renderTable(); renderDiamond(); renderFlywheel(); renderBurn(); renderInfra();
   $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at);
 
   if (TIP_ADDR && $('tipline')) {
