@@ -752,7 +752,9 @@ function renderBurn() {
   const last = bv.length ? bv[bv.length - 1].ts : null;
   const st = S.data.stats || {};
   const pend = st.pending_fee_eth, ethUsd = st.eth_usd;
+  const comb = tot + (st.locked_frong || 0);
   $('burntiles').innerHTML = [
+    ['Burned + locked', fmtAmt(comb) + `<span class="delta">${(comb / SUPPLY * 100).toFixed(2)}% of supply, gone forever</span>`],
     ['Burned so far', fmtAmt(tot) + `<span class="delta">${(tot / SUPPLY * 100).toFixed(2)}% of supply</span>`],
     ['Worth right now', fmtUsd(tot * px)],
     ['Waiting to burn', pend != null
