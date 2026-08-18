@@ -81,6 +81,23 @@ const $ = id => document.getElementById(id);
   }
 }
 
+/* ---------------- tip jar (independent of data load) ---------------- */
+if (TIP_ADDR && $('tipline')) {
+  $('tipline').hidden = false;
+  const jar = $('tipjar');
+  $('tipaddr').textContent = TIP_ADDR;
+  $('tipexplore').href = EXPLORER + '/address/' + TIP_ADDR;
+  $('tipbtn').addEventListener('click', () => jar.showModal());
+  $('tipclose').addEventListener('click', () => jar.close());
+  jar.addEventListener('click', ev => { if (ev.target === jar) jar.close(); });
+  const cp = $('tipcopy');
+  cp.addEventListener('click', () => {
+    navigator.clipboard?.writeText(TIP_ADDR);
+    cp.textContent = 'copied — ribbit 🐸';
+    setTimeout(() => { cp.textContent = 'copy address'; }, 1600);
+  });
+}
+
 /* ---------------- tabs ---------------- */
 const PANES = ['signal', 'scanner', 'diamond', 'flywheel'];
 const PANE_ALIAS = { lookup: 'scanner', whales: 'signal' };
@@ -973,22 +990,6 @@ async function boot() {
   renderStats(); renderVerdict(); renderSignal(); renderMovers(); renderApex();
   renderAggr(); renderTable(); renderDiamond(); renderFlywheel(); renderBurn(); renderInfra();
   $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at);
-
-  if (TIP_ADDR && $('tipline')) {
-    $('tipline').hidden = false;
-    const jar = $('tipjar');
-    $('tipaddr').textContent = TIP_ADDR;
-    $('tipexplore').href = EXPLORER + '/address/' + TIP_ADDR;
-    $('tipbtn').addEventListener('click', () => jar.showModal());
-    $('tipclose').addEventListener('click', () => jar.close());
-    jar.addEventListener('click', ev => { if (ev.target === jar) jar.close(); });
-    const cp = $('tipcopy');
-    cp.addEventListener('click', () => {
-      navigator.clipboard?.writeText(TIP_ADDR);
-      cp.textContent = 'copied — ribbit 🐸';
-      setTimeout(() => { cp.textContent = 'copy address'; }, 1600);
-    });
-  }
 
   pollPrice();
   setInterval(pollPrice, 30000);
