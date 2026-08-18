@@ -9,7 +9,7 @@ const EXPLORER = 'https://robinhoodchain.blockscout.com';
 const DS = 'https://api.dexscreener.com/latest/dex/tokens';
 const TOKEN = '0x6245e67affA44a23077f0Ea7f981a8DC743a0c47';
 const SUPPLY = 1e9;
-const TIP_ADDR = ''; // anon tip wallet — leave empty to hide the footer link
+const TIP_ADDR = ''; // anon tip wallet — leave empty to hide the tip button
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const S = {
@@ -976,14 +976,17 @@ async function boot() {
 
   if (TIP_ADDR && $('tipline')) {
     $('tipline').hidden = false;
-    const tl = $('tiplink');
-    tl.href = EXPLORER + '/address/' + TIP_ADDR;
-    tl.title = TIP_ADDR;
-    tl.addEventListener('click', ev => {
-      ev.preventDefault();
+    const jar = $('tipjar');
+    $('tipaddr').textContent = TIP_ADDR;
+    $('tipexplore').href = EXPLORER + '/address/' + TIP_ADDR;
+    $('tipbtn').addEventListener('click', () => jar.showModal());
+    $('tipclose').addEventListener('click', () => jar.close());
+    jar.addEventListener('click', ev => { if (ev.target === jar) jar.close(); });
+    const cp = $('tipcopy');
+    cp.addEventListener('click', () => {
       navigator.clipboard?.writeText(TIP_ADDR);
-      tl.textContent = 'address copied 🐸';
-      setTimeout(() => { tl.textContent = 'tip the pondkeeper'; }, 1600);
+      cp.textContent = 'copied — ribbit 🐸';
+      setTimeout(() => { cp.textContent = 'copy address'; }, 1600);
     });
   }
 

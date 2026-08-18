@@ -397,6 +397,31 @@ footer{border-top:1px solid var(--border);margin-top:36px;padding-top:18px;
   font-size:12.5px;color:var(--muted);line-height:1.7}
 footer .cols{display:flex;flex-wrap:wrap;gap:10px 34px}
 
+/* ---------- tip jar ---------- */
+.tipbtn{font-family:'Plex Mono',monospace;font-size:12.5px;color:var(--accent);
+  background:var(--accent-soft);border:1px solid var(--baseline);border-radius:3px;
+  padding:3px 10px;cursor:pointer;white-space:nowrap}
+.tipbtn:hover{border-color:var(--accent);box-shadow:var(--glow)}
+.tipjar{background:var(--surface);color:var(--ink);border:1px solid var(--baseline);
+  border-radius:6px;padding:20px 24px 22px;max-width:440px;width:calc(100vw - 40px);
+  box-shadow:var(--shadow)}
+.tipjar::backdrop{background:rgba(7,10,6,.78);backdrop-filter:blur(2px)}
+.tj-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.tj-frog{font-size:26px;line-height:1}
+.tipjar h2{flex:1;margin:0;font-family:'Plex Mono',monospace;font-size:15px;
+  letter-spacing:.10em;text-transform:uppercase;color:var(--accent)}
+.tj-close{color:var(--muted);font-size:15px;padding:2px 6px;border-radius:3px}
+.tj-close:hover{color:var(--ink);background:var(--surface-2)}
+.tipjar p{margin:10px 0 0;font-size:13.5px;line-height:1.6;color:var(--ink-2)}
+.tj-addr{margin-top:14px;padding:9px 11px;background:var(--surface-2);
+  border:1px solid var(--baseline);border-radius:3px;font-size:12.5px;
+  color:var(--ink);word-break:break-all;user-select:all}
+.tj-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13px}
+.tj-copy{font-family:'Plex Mono',monospace;font-size:12.5px;color:var(--page);
+  background:var(--accent);border-radius:3px;padding:6px 14px;font-weight:600}
+.tj-copy:hover{box-shadow:var(--glow)}
+.tj-fine{font-size:12px !important;color:var(--muted) !important}
+
 /* ---------- methodology page ---------- */
 .prose{max-width:72ch}
 .prose h1{font-family:'Plex Mono',monospace;font-size:24px;letter-spacing:.06em;text-transform:uppercase}

@@ -78,12 +78,34 @@
         <a href="https://dexscreener.com" rel="noopener">DexScreener</a></span>
       <span><a href="methodology.html">Methodology &amp; limitations</a></span>
       <span><a href="https://github.com/pondkeeper/frong-ledger" rel="noopener">open source ↗</a></span>
+      <span id="tipline" hidden><button id="tipbtn" class="tipbtn">🪰 toss a fly to the pondkeeper</button></span>
       <span id="gen"></span>
     </div>
     <p>Not financial advice. All figures are estimates reconstructed from public on-chain data. 🐸</p>
   </footer>
 </div>
 
-<script src="app.js?v=13"></script>
+<dialog id="tipjar" class="tipjar" aria-labelledby="tipjar-title">
+  <div class="tj-head">
+    <span class="tj-frog" aria-hidden="true">🐸</span>
+    <h2 id="tipjar-title">Toss a fly in the pond</h2>
+    <button id="tipclose" class="tj-close" aria-label="Close">✕</button>
+  </div>
+  <p>The Frong Ledger is free and open-source. No ads, no paywall, no token to sell you —
+    and that never changes.</p>
+  <p>If the pond has been useful and you feel like it, you can toss the pondkeeper a fly.
+    Tips go toward keeping the tracker fed and running, and building new free tools for the
+    FRONG community. Completely optional: tipping unlocks nothing, and skipping it costs you
+    nothing. The frog loves you either way.</p>
+  <div class="tj-addr mono" id="tipaddr"></div>
+  <div class="tj-actions">
+    <button id="tipcopy" class="tj-copy">copy address</button>
+    <a id="tipexplore" href="#" rel="noopener" target="_blank">watch the tip jar on-chain ↗</a>
+  </div>
+  <p class="tj-fine">ETH or FRONG on Robinhood Chain. Every fly lands in a public wallet —
+    audit it like everything else here.</p>
+</dialog>
+
+<script src="app.js?v=14"></script>
 </body>
 </html>
