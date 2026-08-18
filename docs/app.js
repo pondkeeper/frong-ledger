@@ -9,7 +9,7 @@ const EXPLORER = 'https://robinhoodchain.blockscout.com';
 const DS = 'https://api.dexscreener.com/latest/dex/tokens';
 const TOKEN = '0x6245e67affA44a23077f0Ea7f981a8DC743a0c47';
 const SUPPLY = 1e9;
-const TIP_ADDR = ''; // anon tip wallet — leave empty to hide the tip button
+const TIP_ADDR = '0xfab7eb30FF671e9Ff0551732771F4C6Ba27449d6'; // anon tip wallet — leave empty to hide the tip button
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const S = {
