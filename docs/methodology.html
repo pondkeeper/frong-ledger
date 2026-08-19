@@ -46,15 +46,17 @@
 
   <h2>Verification</h2>
   <p>After each refresh, the balance implied by a wallet's reconstructed history is compared
-    to its actual on-chain balance. Wallets that don't reconcile are flagged
-    <code>reconciling</code> in the table rather than hidden — in practice this is a race
-    between the holder snapshot and a trade landing mid-refresh, and it self-heals on the
-    next cycle. At the time of the first release, all 50 tracked wallets reconciled exactly.</p>
+    to its actual on-chain balance. A mismatch first triggers a live balance re-read (to rule
+    out a race with a trade landing mid-refresh); if the history still doesn't reconcile, the
+    wallet's entire transfer history is re-fetched from scratch that same run. Each refresh
+    also re-fetches the last hour of every wallet's transfers wholesale, so same-second
+    trades can't be skipped and nothing is ever double-counted.</p>
 
   <h2>Whale flow</h2>
   <p>Net flow sums every tracked wallet's inbound minus outbound FRONG per hour. Transfers
-    between two tracked wallets cancel out, so internal shuffling doesn't fake a signal.
-    The holder-count line beneath it is sampled every refresh cycle.</p>
+    between two tracked wallets are tagged internal and excluded from the flow, the
+    verdict's buyer/seller counts, the movers list, and realized PnL — internal shuffling
+    can't fake a signal anywhere on the site.</p>
   <p><b>No survivorship bias:</b> "tracked" is not just today's top 50. A wallet that sells
     its way off the list stays tracked (the most recently active stay first, up to 80 total),
     so a whale's exit dump still counts in the flow, the verdict, and the movers list —
@@ -64,7 +66,11 @@
   <p>Harvest events are detected as FRONG inflows to the protocol fee recipient, which
     pairs its share and re-deposits it into the pool with the resulting LP position sent
     to the burn address. "FRONG recycled" is the cumulative sum of those inflows —
-    fees that became permanent liquidity instead of being extracted.</p>
+    fees that became permanent liquidity instead of being extracted. (Verified on-chain:
+    every harvested FRONG to date has ended at the Uniswap position manager, i.e. inside
+    the pool.) To be precise about what "locked" means: the <i>liquidity position</i> is
+    locked forever; the recycled FRONG inside it is still buyable like any pool token.
+    Only burned FRONG is gone from the supply.</p>
 
   <h2>Known limitations</h2>
   <ul>

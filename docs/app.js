@@ -59,6 +59,7 @@ const fmtAgo = ts => {
   return Math.round(s/86400) + 'd ago';
 };
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const hx = s => /^0x[0-9a-fA-F]{2,64}$/.test(s || '') ? s : ''; // chain strings going into hrefs must be hex
 const $ = id => document.getElementById(id);
 
 /* ---------------- hero video: respect reduced motion, rescue mobile autoplay ---------------- */
@@ -456,7 +457,7 @@ function renderSignal() {
   const map = new Map();
   for (const w of S.data.wallets) {  // all tracked whales, incl. those who sold out of the top-50
     for (const t of w.txs) {
-      if (t.ts < x0) continue;
+      if (t.ts < x0 || t.int) continue;  // internal whale-to-whale moves aren't flow
       const b = t.ts - t.ts % B;
       const e = map.get(b) || { ts: b, val: 0, buy: 0, sell: 0 };
       if (isIn(t, w.addr)) { e.val += t.amount; e.buy += t.amount; }
@@ -543,9 +544,15 @@ function renderVerdict() {
   let net = 0, buyers = 0, sellers = 0;
   for (const w of S.data.wallets) {  // all tracked whales, incl. those who sold out of the top-50
     let n = 0;
-    for (const t of w.txs) if (t.ts >= x0) n += isIn(t, w.addr) ? t.amount : -t.amount;
+    for (const t of w.txs) if (t.ts >= x0 && !t.int) n += isIn(t, w.addr) ? t.amount : -t.amount;
     net += n;
     if (n > 50000) buyers++; else if (n < -50000) sellers++;
+  }
+  if (now - S.data.generated_at > 3600) {  // silence must not render as "holding"
+    el.className = 'verdict mid';
+    el.innerHTML = `<span class="vmain">● DATA IS STALE</span>
+      <span class="vsub">whale data last refreshed ${fmtAgo(S.data.generated_at)} — the pipeline may be down; verdict withheld</span>`;
+    return;
   }
   const thr = SUPPLY * 0.0002;
   const [head, cls] =
@@ -579,7 +586,7 @@ function renderMovers() {
         <div class="mvwho">
           <a class="mvaddr" href="ledger.html" title="open the ledger">${short(m.addr)}</a>
           <span class="mvtags">${r ? `whale #${r.rank}` : (m.in_top === false ? 'sold out of top 50' : 'whale')}${m.cohort === 'day_one' || m.cohort === 'sniper' ? ' · day one og' : ''}
-            · <a href="${EXPLORER}/address/${m.addr}" target="_blank" rel="noopener">explorer ↗</a></span>
+            · <a href="${EXPLORER}/address/${hx(m.addr)}" target="_blank" rel="noopener">explorer ↗</a></span>
         </div>
         <div class="mvdata">
           <span class="mvamt ${pos ? 'pnl-pos' : 'pnl-neg'}">${pos ? '+' : '−'}${fmtAmt(Math.abs(m.net24))} FRONG</span>
@@ -642,7 +649,7 @@ function buildPanel(w) {
       <span>sold <b>${fmtAmt(sells.reduce((s, t) => s + t.amount, 0))} · ${fmtUsd(w.sell_usd)}</b></span>
       <span>transfers <b>${w.n_txs}</b></span>
       <span>realized <b class="${w.realized >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtSigned(w.realized)}</b></span>
-      <span><a href="${EXPLORER}/address/${w.addr}" target="_blank" rel="noopener">Blockscout ↗</a></span>
+      <span><a href="${EXPLORER}/address/${hx(w.addr)}" target="_blank" rel="noopener">Blockscout ↗</a></span>
     </div>
     <div class="chartbox mini"></div>
     <div class="legend">
@@ -661,7 +668,7 @@ function buildPanel(w) {
             <td class="l"><span class="side ${inn ? 'b' : 's'}">${inn ? '▲ BUY' : '▼ SELL'}</span></td>
             <td>${fmtAmt(t.amount)}</td><td>${fmtPx(t.price)}</td><td>${fmtUsd(t.usd)}</td>
             <td class="l cp">${cpn ? esc(cpn) : short(cp)}${cpc && !cpn ? ' <span class="cptag">contract</span>' : ''}</td>
-            <td class="l"><a href="${EXPLORER}/tx/${t.tx}" target="_blank" rel="noopener">${t.tx ? t.tx.slice(0, 10) + '…' : ''} ↗</a></td>
+            <td class="l"><a href="${EXPLORER}/tx/${hx(t.tx)}" target="_blank" rel="noopener">${t.tx ? t.tx.slice(0, 10) + '…' : ''} ↗</a></td>
           </tr>`; }).join('')}
         </tbody>
       </table>
@@ -691,11 +698,11 @@ function renderApex() {
   const w = day1[0];
   const bought = w.txs.filter(t => isIn(t, w.addr)).reduce((s, t) => s + t.amount, 0);
   const held = bought > 0 ? Math.min(100, w.balance / bought * 100) : 0;
-  const never = w.sell_usd < 1;
+  const never = !w.txs.some(t => !t.int && !isIn(t, w.addr));
   const days = Math.max(1, Math.floor((Date.now() / 1000 - w.first_ts) / 86400));
   host.innerHTML = `
     <div class="axrank">SPECIMEN 01 · APEX</div>
-    <div class="axaddr"><a href="${EXPLORER}/address/${w.addr}" target="_blank" rel="noopener">${short(w.addr)}</a>
+    <div class="axaddr"><a href="${EXPLORER}/address/${hx(w.addr)}" target="_blank" rel="noopener">${short(w.addr)}</a>
       ${never ? '<span class="badge og">never sold</span>' : ''}</div>
     <div class="axmult">×${w._mult >= 100 ? w._mult.toFixed(0) : w._mult.toFixed(1)}</div>
     <div class="axline">bought day one at ${fmtPx(w.avg_entry)} —
@@ -715,14 +722,14 @@ function renderDiamond() {
   $('dgrid').innerHTML = top.map((w, i) => {
     const bought = w.txs.filter(t => isIn(t, w.addr)).reduce((s, t) => s + t.amount, 0);
     const held = bought > 0 ? Math.min(100, w.balance / bought * 100) : 0;
-    const never = w.sell_usd < 1;
+    const never = !w.txs.some(t => !t.int && !isIn(t, w.addr));
     const days = Math.max(1, Math.floor((Date.now() / 1000 - w.first_ts) / 86400));
     return `<div class="dcard${i === 0 ? ' apex' : ''}">
       <span class="dbr b1"></span><span class="dbr b2"></span>
       <span class="dbr b3"></span><span class="dbr b4"></span>
       <div class="dtop"><span class="drank">SPECIMEN ${String(i + 1).padStart(2, '0')}</span>
         <span class="dsince">in the pond ${days}d</span></div>
-      <div class="daddr"><a href="${EXPLORER}/address/${w.addr}" target="_blank" rel="noopener">${short(w.addr)}</a>
+      <div class="daddr"><a href="${EXPLORER}/address/${hx(w.addr)}" target="_blank" rel="noopener">${short(w.addr)}</a>
         ${never ? '<span class="badge og">never sold</span>' : ''}
         ${i === 0 ? '<span class="badge apexbadge">apex</span>' : ''}</div>
       <div class="dmult">×${w._mult >= 100 ? w._mult.toFixed(0) : w._mult.toFixed(1)}</div>
@@ -742,7 +749,7 @@ function renderFlywheel() {
   const tot = hv.reduce((s, h) => s + h.frong, 0);
   const last = hv.length ? hv[hv.length - 1].ts : null;
   $('fwtiles').innerHTML = [
-    ['Locked so far', fmtAmt(tot) + `<span class="delta">${(tot / SUPPLY * 100).toFixed(1)}% of supply</span>`],
+    ['Recycled into liquidity', fmtAmt(tot) + `<span class="delta">${(tot / SUPPLY * 100).toFixed(1)}% of supply</span>`],
     ['Worth right now', fmtUsd(tot * px)],
     ['Harvests', String(hv.length)],
     ['Last harvest', last ? fmtAgo(last) : '—'],
@@ -754,8 +761,8 @@ function renderFlywheel() {
   if (pts.length >= 2)
     drawLine($('fwchart'), { points: pts, height: 200,
       yFmt: fmtAmt, endDot: true, endFmt: v => fmtAmt(v) + ' FRONG',
-      yTipFmt: v => fmtAmt(v) + ' FRONG locked forever',
-      label: 'Cumulative FRONG locked into the pool' });
+      yTipFmt: v => fmtAmt(v) + ' FRONG recycled into locked liquidity',
+      label: 'Cumulative FRONG recycled into the pool' });
 }
 
 function renderBurn() {
@@ -769,7 +776,7 @@ function renderBurn() {
   const pend = st.pending_fee_eth, ethUsd = st.eth_usd;
   const comb = tot + (st.locked_frong || 0);
   $('burntiles').innerHTML = [
-    ['Burned + locked', fmtAmt(comb) + `<span class="delta">${(comb / SUPPLY * 100).toFixed(2)}% of supply, gone forever</span>`],
+    ['Burned + recycled', fmtAmt(comb) + `<span class="delta">${(comb / SUPPLY * 100).toFixed(2)}% of supply — burned is gone, recycled sits in locked liquidity</span>`],
     ['Burned so far', fmtAmt(tot) + `<span class="delta">${(tot / SUPPLY * 100).toFixed(2)}% of supply</span>`],
     ['Worth right now', fmtUsd(tot * px)],
     ['Waiting to burn', pend != null
@@ -793,7 +800,7 @@ function renderInfra() {
   if (!$('infra')) return;
   $('infra').innerHTML = (S.data.contracts_top || []).map(c => {
     const nm = c.name ? esc(c.name) : short(c.addr);
-    return `<span title="${esc(c.addr)}"><a href="${EXPLORER}/address/${c.addr}" target="_blank" rel="noopener">${nm}</a> ${fmtAmt(c.balance)} (${(c.balance / SUPPLY * 100).toFixed(2)}%)</span>`;
+    return `<span title="${esc(c.addr)}"><a href="${EXPLORER}/address/${hx(c.addr)}" target="_blank" rel="noopener">${nm}</a> ${fmtAmt(c.balance)} (${(c.balance / SUPPLY * 100).toFixed(2)}%)</span>`;
   }).join('');
 }
 
@@ -822,10 +829,13 @@ async function pollPrice() {
   try {
     const r = await fetch(`${DS}/${TOKEN}`);
     const d = await r.json();
-    const p = d.pairs.reduce((a, b) => a.liquidity.usd > b.liquidity.usd ? a : b);
+    // new pairs can appear without liquidity/volume fields — mirror the pipeline's filter
+    const pairs = (d.pairs || []).filter(x => x.liquidity?.usd > 0);
+    if (!pairs.length) throw new Error('no priced pairs');
+    const p = pairs.reduce((a, b) => a.liquidity.usd > b.liquidity.usd ? a : b);
     S.livePrice = parseFloat(p.priceUsd);
     S.liveStats = { chg24: p.priceChange?.h24, liq: p.liquidity.usd,
-      vol24: d.pairs.reduce((s, x) => s + x.volume.h24, 0) };
+      vol24: (d.pairs || []).reduce((s, x) => s + (x.volume?.h24 || 0), 0) };
     S.priceFails = 0;
     $('livedot').classList.add('on'); $('livedot').classList.remove('stale');
     refreshLiveCells(); renderSignal(); renderDiamond(); renderApex();
@@ -972,15 +982,12 @@ if ($('flowrange'))
 /* ---------------- boot ---------------- */
 async function boot() {
   const cb = Math.floor(Date.now() / 300000); // 5-min bucket busts the Pages CDN cache
-  const [dr, sr] = await Promise.all([
-    fetch('data/data.json?t=' + cb), fetch('data/snapshots.jsonl?t=' + cb),
-  ]);
+  const dr = await fetch('data/data.json?t=' + cb);
   S.data = await dr.json();
-  const stext = await sr.text();
-  S.snaps = stext.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean);
   S.candles = (S.data.candles1h || []).concat(S.data.candles5 || []);
   S.cts = S.candles.map(c => c[0]);
-  S.launch = S.candles.length ? S.candles[0][0] : S.data.wallets[0].txs[0].ts;
+  S.launch = S.data.stats?.launch_ts
+    || (S.candles.length ? S.candles[0][0] : S.data.wallets[0].txs[0].ts);
   const ranked = S.data.wallets.filter(w => w.in_top).slice().sort((a, b) => b.balance - a.balance);
   ranked.forEach((w, i) => S.byAddr.set(w.addr.toLowerCase(), { rank: i + 1, w }));
   S.data.wallets.forEach(liveCalc);

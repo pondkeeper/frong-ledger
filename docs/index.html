@@ -127,9 +127,10 @@
     <div class="card" id="flywheel">
       <h2>The flywheel — liquidity only goes up</h2>
       <p class="cardsub">Most of FRONG's trading fees never get cashed out. Every harvest is re-deposited
-        into the pool and the LP is burned forever. More trading → deeper pool. Nobody can pull it.</p>
+        into the pool, and the LP position itself is locked forever — nobody can pull the liquidity out.
+        (The recycled FRONG is still buyable like any pool token; what's locked is the liquidity, not the coins.)</p>
       <div class="fw-tiles" id="fwtiles"></div>
-      <div class="siglbl">FRONG locked into the pool · running total</div>
+      <div class="siglbl">FRONG recycled into the pool · running total</div>
       <div class="chartbox" id="fwchart"></div>
     </div>
     <div class="card" id="burncard">
@@ -178,6 +179,6 @@
     audit it like everything else here.</p>
 </dialog>
 
-<script src="app.js?v=17"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

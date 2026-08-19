@@ -42,6 +42,20 @@ KNOWN = {
     "0x000000000000000000000000000000000000dead": "Burn",
 }
 
+# never rank these as holders: dEaD is is_contract=false on Blockscout and
+# would otherwise chart as a top-50 "whale" whose inflows read as buying
+EXCLUDE = {
+    "0x000000000000000000000000000000000000dead",
+    "0x0000000000000000000000000000000000000000",
+    FEE_LOCKER.lower(),
+    PROTOCOL_RECIPIENT.lower(),
+}
+
+# first 5-min candle of the pool (2026-07-30 20:15:00 UTC), verified against
+# GeckoTerminal; deriving it from candles1h floored it to the hour and killed
+# the sniper cohort (every age inflated by 900s)
+LAUNCH_TS = 1785442500
+
 def get(url, tries=4):
     for i in range(tries):
         try:
@@ -84,6 +98,8 @@ def norm_transfer(it, KNOWN):
         return None
     return {
         "ts": iso2ts(it["timestamp"]),
+        "blk": it.get("block_number"),
+        "li": it.get("log_index"),
         "from": it["from"]["hash"],
         "from_name": it["from"].get("name") or KNOWN.get(it["from"]["hash"].lower()),
         "from_c": bool(it["from"].get("is_contract")),
@@ -122,27 +138,26 @@ for _ in range(5):
     items = d["data"]["attributes"]["ohlcv_list"]
     if not items:
         break
-    fresh = [[c[0], c[4]] for c in items if c[0] > last_c]
+    # >= so the last stored candle (possibly a provisional in-progress close)
+    # is re-fetched and replaced with its finalized value
+    fresh = [[c[0], c[4]] for c in items if c[0] >= last_c]
     new_c += fresh
     if len(fresh) < len(items) or len(items) < 1000:
         break
     before = min(c[0] for c in items) - 1
     time.sleep(2.2)
-new_c.sort(key=lambda x: x[0])
-candles5 += new_c
-# compact: 5-min older than 48h -> hourly
+cd = {c[0]: c[1] for c in candles5}
+for ts_, cl in new_c:
+    cd[ts_] = cl
+candles5 = sorted([t_, v] for t_, v in cd.items())
+# compact: 5-min older than 48h -> hourly (the hour's LAST close survives)
 cutoff = now - 48 * 3600
 old = [c for c in candles5 if c[0] < cutoff]
 candles5 = [c for c in candles5 if c[0] >= cutoff]
-seen_h = {c[0] for c in candles1h}
-last_hr = None
+hd = {c[0]: c[1] for c in candles1h}
 for c in old:
-    hr = c[0] - c[0] % 3600
-    if hr != last_hr and hr not in seen_h:
-        candles1h.append([hr, c[1]])
-        seen_h.add(hr)
-        last_hr = hr
-candles1h.sort(key=lambda x: x[0])
+    hd[c[0] - c[0] % 3600] = c[1]
+candles1h = sorted([t_, v] for t_, v in hd.items())
 print(f"candles: +{len(new_c)} new, {len(candles5)} recent(5m) + {len(candles1h)} hourly")
 
 all_candles = candles1h + candles5
@@ -168,7 +183,8 @@ if ds and ds.get("pairs"):
 if cur_price is None:
     cur_price = all_candles[-1][1] if all_candles else 0.0
 tok = get(f"{BS}/tokens/{TOKEN}") or {}
-holders_count = int(tok.get("holders_count") or 0)
+holders_count = int(tok.get("holders_count") or 0) \
+    or state.get("token", {}).get("holders_count", 0)  # keep prior on API failure
 print(f"price {cur_price} | holders {holders_count}")
 
 # ---------------- holder ranking ----------------
@@ -178,6 +194,8 @@ pages = 0
 while d and pages < 5:
     for h in d.get("items", []):
         a = h["address"]
+        if a["hash"].lower() in EXCLUDE:
+            continue
         # Robinhood app wallets are EOAs with EIP-7702 delegated code; Blockscout flags
         # them is_contract, but they are users, not infra — rank them with the EOAs.
         aa = a.get("proxy_type") == "eip7702"
@@ -195,43 +213,84 @@ while d and pages < 5:
 top = ranked[:TOP_N]
 top_addrs = {w["addr"].lower() for w in top}
 print(f"ranked {len(ranked)} EOAs, top {len(top)} selected")
+# sanity gate: a failed /holders fetch must not publish an empty ledger
+if len(top) < TOP_N and len(tracked) >= TOP_N:
+    print(f"ABORT: holder ranking returned only {len(top)} EOAs "
+          f"(prior state had {len(tracked)}) — refusing to write", file=sys.stderr)
+    sys.exit(1)
 
 # ---------------- transfers (incremental per wallet) ----------------
-def refresh_wallet(addr, prior):
-    """Return updated tx list (oldest first)."""
+def tx_order(t):
+    # chain order, not just timestamp: same-second sells sorted before their
+    # buys used to hit compute()'s qty floor and corrupt the basis
+    return (t["ts"], t.get("blk") or 0, t.get("li") or 0)
+
+OVERLAP = 3600  # refetch this trailing window in full every run
+
+def refresh_wallet(addr, prior, force_full=False):
+    """Return updated tx list (oldest first) + truncated flag.
+
+    Incremental runs refetch the trailing OVERLAP window and REPLACE it
+    wholesale — a single authoritative fetch, so the old exact-anchor stop
+    can no longer skip same-second transfers (holes) or re-append ones it
+    already had (duplicates). If the window can't be reached before the page
+    cap, fall back to a full rebuild instead of splicing a gap."""
     known_last = prior["txs"][-1] if prior and prior["txs"] else None
-    stop = None
-    if known_last:
-        stop = lambda it: (it.get("transaction_hash") or it.get("tx_hash")) == known_last["tx"] \
-                          and iso2ts(it["timestamp"]) <= known_last["ts"]
+    if force_full or not known_last:
+        fresh, truncated = [], False
+        for it in paginate(f"{BS}/addresses/{addr}/token-transfers?token={TOKEN}", 120):
+            if it.get("__truncated__"):
+                truncated = True
+                continue
+            t = norm_transfer(it, KNOWN)
+            if t:
+                fresh.append(t)
+        fresh.sort(key=tx_order)
+        return fresh, truncated
+    cut = known_last["ts"] - OVERLAP
     fresh, truncated = [], False
-    max_pages = 6 if known_last else 40
-    for it in paginate(f"{BS}/addresses/{addr}/token-transfers?token={TOKEN}", max_pages, stop):
+    for it in paginate(f"{BS}/addresses/{addr}/token-transfers?token={TOKEN}", 8,
+                       lambda it: iso2ts(it["timestamp"]) < cut):
         if it.get("__truncated__"):
             truncated = True
             continue
         t = norm_transfer(it, KNOWN)
-        if t:
+        if t and t["ts"] >= cut:
             fresh.append(t)
-    fresh.sort(key=lambda x: x["ts"])
-    txs = (prior["txs"] if prior else []) + fresh
-    return txs, truncated
+    if truncated:  # couldn't reach the window edge — splicing would leave a hole
+        return refresh_wallet(addr, prior, force_full=True)
+    fresh.sort(key=tx_order)
+    return [t for t in prior["txs"] if t["ts"] < cut] + fresh, False
 
 def compute(addr, txs, balance):
     qty = cost = realized = buy_usd = sell_usd = 0.0
+    final_before = all_candles[-1][0] if all_candles else 0
     for t in txs:
-        px = t.get("price") or price_at(t["ts"])
-        t["price"] = px
+        px = t.get("price")
+        if px is None:
+            px = price_at(t["ts"])
+            if t["ts"] < final_before:  # don't freeze a provisional in-progress close
+                t["price"] = px
         t["usd"] = t["amount"] * px
+        # counterparty is another tracked whale: quantity moves, but it is not a
+        # market buy/sell — keep it out of buy/sell USD and realized PnL
+        other = t["from"] if t["to"].lower() == addr.lower() else t["to"]
+        internal = other.lower() in work_addrs
+        t["int"] = internal
+        if t["from"].lower() == t["to"].lower():
+            continue  # self-transfer: no position change
         if t["to"].lower() == addr.lower():
-            cost += t["usd"]; qty += t["amount"]; buy_usd += t["usd"]
+            cost += t["usd"]; qty += t["amount"]
+            if not internal:
+                buy_usd += t["usd"]
         else:
             avg = cost / qty if qty > 0 else px
             take = min(t["amount"], qty)
-            realized += take * (px - avg)
+            if not internal:
+                realized += take * (px - avg)
+                sell_usd += t["usd"]
             cost -= take * avg
             qty = max(0.0, qty - t["amount"])
-            sell_usd += t["usd"]
     avg_cost = cost / qty if qty > 0 else None
     return {
         "balance": balance, "pct_supply": balance / SUPPLY * 100,
@@ -246,10 +305,20 @@ def compute(addr, txs, balance):
 
 wallets_out = []
 work = [(w["addr"], w["balance"], w.get("aa", False)) for w in top]
+def fetch_balance(addr):
+    """Live token balance, or None on API failure (caller must not treat as 0)."""
+    r = get(f"{BS}/addresses/{addr}/token-balances")
+    if r is None:
+        return None
+    for tb in r:
+        if tb["token"]["address_hash"].lower() == TOKEN.lower():
+            return int(tb["value"]) / 1e18
+    return 0.0
+
 # keep previously-tracked wallets that fell out of top-N (up to cap),
 # most-recently-active first: a whale dumping out of the top-50 today must
 # displace a long-idle dust wallet, never get dropped for lack of a slot
-fallen = [w for a, w in tracked.items() if a not in top_addrs]
+fallen = [w for a, w in tracked.items() if a not in top_addrs and a not in EXCLUDE]
 fallen.sort(key=lambda w: w["txs"][-1]["ts"] if w.get("txs") else 0, reverse=True)
 for w in fallen:
     if len(work) >= TRACK_CAP:
@@ -257,22 +326,35 @@ for w in fallen:
     a = w["addr"].lower()
     bal = next((r["balance"] for r in ranked if r["addr"].lower() == a), None)
     if bal is None:
-        r = get(f"{BS}/addresses/{w['addr']}/token-balances")
-        bal = 0.0
-        for tb in r or []:
-            if tb["token"]["address_hash"].lower() == TOKEN.lower():
-                bal = int(tb["value"]) / 1e18
+        bal = fetch_balance(w["addr"])
+    if bal is None:
+        bal = w.get("balance", 0.0)  # API hiccup: keep prior, don't publish 0
     work.append((w["addr"], bal, w.get("aa", False)))
+
+work_addrs = {a.lower() for a, _b, _aa in work}
 
 def process_wallet(item):
     i, (addr, bal, aa) = item
     prior = tracked.get(addr.lower())
     txs, trunc = refresh_wallet(addr, prior)
     stats = compute(addr, txs, bal)
-    stats["truncated"] = trunc or bool(prior and prior.get("truncated"))
+    if stats["balance_mismatch"] and prior:
+        # first assume a snapshot race: re-read the live balance
+        live = fetch_balance(addr)
+        if live is not None and abs(stats["computed_balance"] - live) <= max(1.0, live * 0.02):
+            bal = live
+            stats = compute(addr, txs, bal)
+        else:
+            # genuine history corruption (legacy holes/dupes): rebuild from scratch
+            print(f"  [{i+1}/{len(work)}] {addr[:10]} mismatch — full rebuild")
+            txs, trunc = refresh_wallet(addr, prior, force_full=True)
+            if live is not None:
+                bal = live
+            stats = compute(addr, txs, bal)
+    stats["truncated"] = trunc
     n_new = len(txs) - (len(prior["txs"]) if prior else 0)
     if n_new or not prior:
-        print(f"  [{i+1}/{len(work)}] {addr[:10]} +{n_new} txs (total {len(txs)})")
+        print(f"  [{i+1}/{len(work)}] {addr[:10]} {n_new:+d} txs (total {len(txs)})")
     return {"addr": addr, "in_top": addr.lower() in top_addrs, "aa": aa, **stats, "txs": txs}
 
 with ThreadPoolExecutor(max_workers=6) as pool:
@@ -280,13 +362,15 @@ with ThreadPoolExecutor(max_workers=6) as pool:
 
 # ---------------- fee mechanics (no attribution) ----------------
 last_h = harvests[-1]["ts"] if harvests else 0
+seen_h = {(h["tx"], round(h["frong"], 6)) for h in harvests}
 new_h = []
 for it in paginate(f"{BS}/addresses/{PROTOCOL_RECIPIENT}/token-transfers?token={TOKEN}", 10,
-                   lambda it: iso2ts(it["timestamp"]) <= last_h):
+                   lambda it: iso2ts(it["timestamp"]) < last_h):
     if it.get("__truncated__"):
         continue
     t = norm_transfer(it, KNOWN)
-    if t and t["to"].lower() == PROTOCOL_RECIPIENT.lower():
+    if t and t["to"].lower() == PROTOCOL_RECIPIENT.lower() \
+            and (t["tx"], round(t["amount"], 6)) not in seen_h:
         new_h.append({"ts": t["ts"], "frong": t["amount"], "tx": t["tx"]})
 new_h.sort(key=lambda x: x["ts"])
 harvests += new_h
@@ -297,17 +381,21 @@ print(f"harvests: +{len(new_h)} new, total {len(harvests)} | cumulative {locked_
 # Machine burns are exactly 500k FRONG per claim (BuybackAndBurnClaimRecipient.minCurrency1BurnAmount);
 # anything else sent to the dead address is a community/dust burn.
 DEAD = "0x000000000000000000000000000000000000dEaD"
+ZERO = "0x0000000000000000000000000000000000000000"
 MACHINE_BURN = 500000.0
 last_b = burns[-1]["ts"] if burns else 0
+seen_b = {(b["tx"], round(b["frong"], 6)) for b in burns}
 new_b = []
-for it in paginate(f"{BS}/addresses/{DEAD}/token-transfers?token={TOKEN}", 10,
-                   lambda it: iso2ts(it["timestamp"]) <= last_b):
-    if it.get("__truncated__"):
-        continue
-    t = norm_transfer(it, KNOWN)
-    if t and t["to"].lower() == DEAD.lower():
-        new_b.append({"ts": t["ts"], "frong": t["amount"], "tx": t["tx"],
-                      "machine": abs(t["amount"] - MACHINE_BURN) < 1})
+for sink in (DEAD, ZERO):  # a burn() emitting to 0x0 must not be invisible
+    for it in paginate(f"{BS}/addresses/{sink}/token-transfers?token={TOKEN}", 10,
+                       lambda it: iso2ts(it["timestamp"]) < last_b):
+        if it.get("__truncated__"):
+            continue
+        t = norm_transfer(it, KNOWN)
+        if t and t["to"].lower() == sink.lower() \
+                and (t["tx"], round(t["amount"], 6)) not in seen_b:
+            new_b.append({"ts": t["ts"], "frong": t["amount"], "tx": t["tx"],
+                          "machine": abs(t["amount"] - MACHINE_BURN) < 1})
 new_b.sort(key=lambda x: x["ts"])
 burns += new_b
 burned_frong = sum(b["frong"] for b in burns)
@@ -356,7 +444,7 @@ print(f"pending fees: {pending_eth:.4f} ETH | ETH ${eth_usd}" if pending_eth is 
 
 # ---------------- derived intelligence ----------------
 # Everything below is additive: the frontend can ignore it safely.
-LAUNCH_TS = (candles1h or candles5 or [[now, 0]])[0][0]
+# LAUNCH_TS is the verified constant defined at the top of this file.
 COHORTS = [
     ("sniper",     "First 10 minutes",  0,        600),
     ("day_one",    "First 24 hours",    600,      86400),
@@ -403,7 +491,7 @@ for key, label, _lo, _hi in COHORTS:
 def net_flow(w, since):
     net = 0.0
     for t in w["txs"]:
-        if t["ts"] < since:
+        if t["ts"] < since or t.get("int"):  # internal whale-to-whale moves aren't flow
             continue
         net += t["amount"] if t["to"].lower() == w["addr"].lower() else -t["amount"]
     return net
