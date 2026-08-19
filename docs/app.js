@@ -454,8 +454,7 @@ function renderSignal() {
 
   const B = 3600;
   const map = new Map();
-  for (const w of S.data.wallets) {
-    if (!w.in_top) continue;
+  for (const w of S.data.wallets) {  // all tracked whales, incl. those who sold out of the top-50
     for (const t of w.txs) {
       if (t.ts < x0) continue;
       const b = t.ts - t.ts % B;
@@ -542,8 +541,7 @@ function renderVerdict() {
   const px = S.livePrice || S.data.token.price;
   const now = Math.floor(Date.now() / 1000), x0 = now - 86400;
   let net = 0, buyers = 0, sellers = 0;
-  for (const w of S.data.wallets) {
-    if (!w.in_top) continue;
+  for (const w of S.data.wallets) {  // all tracked whales, incl. those who sold out of the top-50
     let n = 0;
     for (const t of w.txs) if (t.ts >= x0) n += isIn(t, w.addr) ? t.amount : -t.amount;
     net += n;
@@ -580,7 +578,7 @@ function renderMovers() {
         <span class="mvside ${pos ? 'b' : 's'}">${pos ? '▲' : '▼'}</span>
         <div class="mvwho">
           <a class="mvaddr" href="ledger.html" title="open the ledger">${short(m.addr)}</a>
-          <span class="mvtags">${r ? `whale #${r.rank}` : 'whale'}${m.cohort === 'day_one' || m.cohort === 'sniper' ? ' · day one og' : ''}
+          <span class="mvtags">${r ? `whale #${r.rank}` : (m.in_top === false ? 'sold out of top 50' : 'whale')}${m.cohort === 'day_one' || m.cohort === 'sniper' ? ' · day one og' : ''}
             · <a href="${EXPLORER}/address/${m.addr}" target="_blank" rel="noopener">explorer ↗</a></span>
         </div>
         <div class="mvdata">

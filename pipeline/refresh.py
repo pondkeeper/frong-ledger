@@ -246,17 +246,23 @@ def compute(addr, txs, balance):
 
 wallets_out = []
 work = [(w["addr"], w["balance"], w.get("aa", False)) for w in top]
-# keep previously-tracked wallets that fell out of top-N (up to cap)
-for a, w in tracked.items():
-    if a not in top_addrs and len(work) < TRACK_CAP:
-        bal = next((r["balance"] for r in ranked if r["addr"].lower() == a), None)
-        if bal is None:
-            r = get(f"{BS}/addresses/{w['addr']}/token-balances")
-            bal = 0.0
-            for tb in r or []:
-                if tb["token"]["address_hash"].lower() == TOKEN.lower():
-                    bal = int(tb["value"]) / 1e18
-        work.append((w["addr"], bal, w.get("aa", False)))
+# keep previously-tracked wallets that fell out of top-N (up to cap),
+# most-recently-active first: a whale dumping out of the top-50 today must
+# displace a long-idle dust wallet, never get dropped for lack of a slot
+fallen = [w for a, w in tracked.items() if a not in top_addrs]
+fallen.sort(key=lambda w: w["txs"][-1]["ts"] if w.get("txs") else 0, reverse=True)
+for w in fallen:
+    if len(work) >= TRACK_CAP:
+        break
+    a = w["addr"].lower()
+    bal = next((r["balance"] for r in ranked if r["addr"].lower() == a), None)
+    if bal is None:
+        r = get(f"{BS}/addresses/{w['addr']}/token-balances")
+        bal = 0.0
+        for tb in r or []:
+            if tb["token"]["address_hash"].lower() == TOKEN.lower():
+                bal = int(tb["value"]) / 1e18
+    work.append((w["addr"], bal, w.get("aa", False)))
 
 def process_wallet(item):
     i, (addr, bal, aa) = item
@@ -402,26 +408,34 @@ def net_flow(w, since):
         net += t["amount"] if t["to"].lower() == w["addr"].lower() else -t["amount"]
     return net
 
-movers = []
-for w in top_set:
+# all tracked wallets, not just the current top-N: a whale who sold their way
+# out of the top-50 is exactly the move this list exists to show
+movers_all = []
+for w in wallets_out:
     n24 = net_flow(w, now - 86400)
     if abs(n24) * cur_price >= 200:      # ignore dust
-        movers.append({"addr": w["addr"], "net24": n24, "usd24": n24 * cur_price,
-                       "balance": w["balance"], "cohort": w["cohort"],
-                       "aa": w.get("aa", False)})
-movers.sort(key=lambda m: -abs(m["net24"]))
-movers = movers[:12]
+        movers_all.append({"addr": w["addr"], "net24": n24, "usd24": n24 * cur_price,
+                           "balance": w["balance"], "cohort": w["cohort"],
+                           "aa": w.get("aa", False), "in_top": w["in_top"]})
+movers_all.sort(key=lambda m: -abs(m["net24"]))
+movers = movers_all[:12]
 
 # concentration + churn vs the previous run
 prev_top = {a for a, w in tracked.items() if w.get("in_top")}
 cur_top = {w["addr"].lower() for w in top_set}
+by_addr = {w["addr"].lower(): w for w in wallets_out}
+exited_rows = []
+for a in sorted(prev_top - cur_top) if prev_top else []:
+    w = by_addr.get(a)
+    exited_rows.append({"addr": w["addr"], "net24": net_flow(w, now - 86400),
+                        "balance": w["balance"]} if w else {"addr": a})
 by_bal = sorted(top_set, key=lambda w: -w["balance"])
 concentration = {
     "top1": (by_bal[0]["balance"] / SUPPLY * 100) if by_bal else 0,
     "top10": sum(w["balance"] for w in by_bal[:10]) / SUPPLY * 100,
     "top50": sum(w["balance"] for w in by_bal) / SUPPLY * 100,
     "entered": sorted(cur_top - prev_top) if prev_top else [],
-    "exited": sorted(prev_top - cur_top) if prev_top else [],
+    "exited": exited_rows,
 }
 
 stats_block = {
@@ -429,7 +443,7 @@ stats_block = {
     "cohorts": cohort_stats,
     "movers": movers,
     "concentration": concentration,
-    "whale_net24": sum(m["net24"] for m in movers),
+    "whale_net24": sum(m["net24"] for m in movers_all),
     "locked_frong": locked_frong,
     "burned_frong": burned_frong,
     "pending_fee_eth": pending_eth,

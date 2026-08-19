@@ -55,6 +55,10 @@
   <p>Net flow sums every tracked wallet's inbound minus outbound FRONG per hour. Transfers
     between two tracked wallets cancel out, so internal shuffling doesn't fake a signal.
     The holder-count line beneath it is sampled every refresh cycle.</p>
+  <p><b>No survivorship bias:</b> "tracked" is not just today's top 50. A wallet that sells
+    its way off the list stays tracked (the most recently active stay first, up to 80 total),
+    so a whale's exit dump still counts in the flow, the verdict, and the movers list —
+    it is labeled <i>sold out of top 50</i> instead of silently disappearing.</p>
 
   <h2>The flywheel numbers</h2>
   <p>Harvest events are detected as FRONG inflows to the protocol fee recipient, which
