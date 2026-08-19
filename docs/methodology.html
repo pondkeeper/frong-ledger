@@ -72,6 +72,25 @@
     locked forever; the recycled FRONG inside it is still buyable like any pool token.
     Only burned FRONG is gone from the supply.</p>
 
+  <h2>Progress to next burn</h2>
+  <p>The buyback contract burns a fixed <b>500,000 FRONG</b> per claim
+    (<code>minCurrency1BurnAmount</code>, immutable). Whoever fires a claim takes the queued
+    ETH and, in the same transaction, buys those 500,000 FRONG on the open market and sends
+    them to the dead address — so a claim is only worth making once the queued ETH covers
+    what 500,000 FRONG costs. That is the meter: <code>queued ETH ÷ (500,000 × FRONG price
+    in ETH)</code>.</p>
+  <p>"Queued" is read live in your browser as <code>amounts(409801)</code> on all three
+    contracts the fees pass through — the fee vault where they accrue, the vesting contract
+    that releases them, and the buyback contract a claimer draws from. 409801 is FRONG's
+    fee-NFT id. The price leg is the FRONG/ETH rate from the deepest pool, so the bar moves
+    on price as well as on fees: the target is denominated in FRONG, not dollars, so a lower
+    price lowers the bar and a higher price raises it. If the RPC is unreachable the meter
+    falls back to the last value the 10-minute refresh recorded.</p>
+  <p>Two caveats. The bar can reach 100% without a burn happening immediately — firing it is
+    permissionless and nobody is obliged to; in practice a searcher does it within hours. And
+    it can fire slightly <i>before</i> 100%, because a claimer can harvest fresh fees inside
+    the same transaction, adding to the pot the meter hasn't seen yet.</p>
+
   <h2>Known limitations</h2>
   <ul>
     <li><b>Wallet-to-wallet receipts</b> are priced at market on receipt (tagged

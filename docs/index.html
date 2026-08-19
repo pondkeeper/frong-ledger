@@ -12,7 +12,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -47,6 +47,23 @@
 </section>
 
 <div class="wrap">
+
+  <button class="burnmeter bm-hero" data-tab="flywheel" data-scroll="burncard" hidden
+          aria-label="Progress to the next automatic burn — opens the burn machine">
+    <span class="bm-top">
+      <span class="bm-state"><span class="bm-flame" aria-hidden="true">🔥</span><span
+        data-bm="state">Progress to next burn</span></span>
+      <span class="bm-pct">—</span>
+    </span>
+    <span class="bm-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <span class="bm-fill"><span class="bm-sheen" aria-hidden="true"></span><span
+        class="bm-edge" aria-hidden="true"></span></span>
+      <span class="bm-tick" style="left:25%"></span><span class="bm-tick" style="left:50%"></span>
+      <span class="bm-tick" style="left:75%"></span>
+    </span>
+    <span class="bm-bot"><span data-bm="sub">reading the pipeline…</span>
+      <span class="bm-cta">how the burn works →</span></span>
+  </button>
 
   <nav class="tabbar" role="tablist" aria-label="Views">
     <button role="tab" data-tab="signal" aria-selected="true">📡 The Signal</button>
@@ -138,6 +155,33 @@
       <p class="cardsub">Since Aug 12, 2026 the creator's fee share is renounced: it drips out as ETH
         that anyone can claim only by burning 500k FRONG per claim. Burned coins sit at the dead
         address forever. Nobody can mint more.</p>
+
+      <div class="burnmeter bm-full" hidden>
+        <div class="bm-top">
+          <span class="bm-state"><span class="bm-flame" aria-hidden="true">🔥</span><span
+            data-bm="state">Progress to next burn</span></span>
+          <span class="bm-pct">—</span>
+        </div>
+        <div class="bm-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="bm-fill"><span class="bm-sheen" aria-hidden="true"></span><span
+            class="bm-edge" aria-hidden="true"></span></div>
+          <span class="bm-tick" style="left:25%"></span><span class="bm-tick" style="left:50%"></span>
+          <span class="bm-tick" style="left:75%"></span>
+        </div>
+        <div class="fw-tiles bm-tiles">
+          <div class="tile"><div class="lbl">Fees queued</div><div class="val" data-bm="queued">—</div></div>
+          <div class="tile"><div class="lbl">Needed to fire</div><div class="val" data-bm="need">—</div></div>
+          <div class="tile"><div class="lbl">Queued fees buy</div><div class="val" data-bm="buys">—</div></div>
+          <div class="tile"><div class="lbl">Still to accrue</div><div class="val" data-bm="gap">—</div></div>
+        </div>
+        <p class="bm-note">The burn size is fixed at 500,000 FRONG per claim. Whoever fires it buys
+          those coins on the open market with the queued fees and sends them to the dead address, so
+          the machine can only go off once the queued ETH covers 500,000 FRONG at the current price.
+          The trigger is priced in FRONG, not dollars — <strong>cheaper FRONG means the bar is lower
+          and burns come sooner</strong>. Queued fees are read live from the three contracts the
+          money passes through; see the <a href="methodology.html">method</a>.</p>
+      </div>
+
       <div class="fw-tiles" id="burntiles"></div>
       <div class="siglbl">FRONG burned · running total</div>
       <div class="chartbox" id="burnchart"></div>
@@ -179,6 +223,6 @@
     audit it like everything else here.</p>
 </dialog>
 
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

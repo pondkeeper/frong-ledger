@@ -9,12 +9,28 @@ const EXPLORER = 'https://robinhoodchain.blockscout.com';
 const DS = 'https://api.dexscreener.com/latest/dex/tokens';
 const TOKEN = '0x6245e67affA44a23077f0Ea7f981a8DC743a0c47';
 const SUPPLY = 1e9;
+/* Burn meter. The machine fires when the queued creator fees can buy the fixed
+   burn size on the open market, so the trigger is 500k FRONG priced in ETH —
+   it moves with the price, not with a dollar target. amounts(uint256) is read
+   live off the three pipeline stages (FEEB vault -> vesting -> buyback). */
+const RPC = 'https://rpc.mainnet.chain.robinhood.com';
+const FEE_TOKEN_ID = 409801;
+const AMOUNTS_SEL = '0x45f0a44f';
+const FEE_CONTRACTS = [
+  '0x587D2fDDDF14F6f84022b51e8c3a473eB88C4544',
+  '0xeF451B293ED8C61d20f7d13ef336a496F0cc2c26',
+  '0xa1ba4CC12654D2b188e3ba77dc86c75cA47f1A4e',
+];
+const BURN_SIZE = 500000;
+const BURN_LBL = BURN_SIZE.toLocaleString('en-US');
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TIP_ADDR = '0xfab7eb30FF671e9Ff0551732771F4C6Ba27449d6'; // anon tip wallet — leave empty to hide the tip button
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const S = {
   data: null, snaps: [], candles: [], cts: [],
   livePrice: null, liveStats: null, launch: 0,
+  priceNative: null, potEth: null, meterPct: 0, potFails: 0,
   byAddr: new Map(), sortKey: 'balance', sortDir: -1,
   flowHours: 72, priceFails: 0, mainLog: false,
 };
@@ -773,15 +789,11 @@ function renderBurn() {
   const machine = bv.filter(b => b.machine).length;
   const last = bv.length ? bv[bv.length - 1].ts : null;
   const st = S.data.stats || {};
-  const pend = st.pending_fee_eth, ethUsd = st.eth_usd;
   const comb = tot + (st.locked_frong || 0);
   $('burntiles').innerHTML = [
     ['Burned + recycled', fmtAmt(comb) + `<span class="delta">${(comb / SUPPLY * 100).toFixed(2)}% of supply — burned is gone, recycled sits in locked liquidity</span>`],
     ['Burned so far', fmtAmt(tot) + `<span class="delta">${(tot / SUPPLY * 100).toFixed(2)}% of supply</span>`],
     ['Worth right now', fmtUsd(tot * px)],
-    ['Waiting to burn', pend != null
-      ? pend.toFixed(3) + ' ETH' + (ethUsd ? `<span class="delta">${fmtUsd(pend * ethUsd)} in fees queued</span>` : '')
-      : '—'],
     ['Burns', String(bv.length) + (machine ? `<span class="delta">${machine} by the machine</span>` : '')],
     ['Last burn', last ? fmtAgo(last) : '—'],
   ].map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="val">${v}</div></div>`).join('');
@@ -794,6 +806,104 @@ function renderBurn() {
       yFmt: fmtAmt, endDot: true, endFmt: v => fmtAmt(v) + ' FRONG',
       yTipFmt: v => fmtAmt(v) + ' FRONG burned forever',
       label: 'Cumulative FRONG burned' });
+}
+
+/* ---------------- burn meter ---------------- */
+/* Queued creator fees, read live off all three stages of the burn pipeline.
+   Falls back to the cron baseline so the meter still renders if the RPC is down. */
+async function pollPot() {
+  try {
+    const body = FEE_CONTRACTS.map((c, i) => ({
+      jsonrpc: '2.0', id: i + 1, method: 'eth_call',
+      params: [{ to: c, data: AMOUNTS_SEL + FEE_TOKEN_ID.toString(16).padStart(64, '0') }, 'latest'],
+    }));
+    const r = await fetch(RPC, { method: 'POST',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const out = await r.json();
+    if (!Array.isArray(out) || out.length !== FEE_CONTRACTS.length) throw new Error('bad batch');
+    let sum = 0;
+    for (const o of out) {
+      if (!o.result) throw new Error('no result');
+      sum += Number(BigInt('0x' + o.result.slice(2, 66))) / 1e18;
+    }
+    S.potEth = sum; S.potFails = 0;
+  } catch (e) {
+    if (++S.potFails > 2 && S.potEth == null) S.potEth = S.data?.stats?.pending_fee_eth ?? null;
+  }
+  renderBurnMeter();
+}
+
+/* Count a number up rather than snapping, so a refresh reads as movement. */
+function animateNum(el, to, fmt, ms = 900) {
+  const from = Number(el.dataset.v || 0);
+  if (!isFinite(from) || Math.abs(to - from) < 1e-12 || REDUCED) {
+    el.dataset.v = to; el.textContent = fmt(to); return;
+  }
+  el.dataset.v = to;
+  const t0 = performance.now();
+  const step = now => {
+    const k = Math.min(1, (now - t0) / ms);
+    const e = 1 - Math.pow(1 - k, 3);
+    el.textContent = fmt(from + (to - from) * e);
+    if (k < 1 && Number(el.dataset.v) === to) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function burnMeterState() {
+  const st = S.data?.stats || {};
+  const pot = S.potEth != null ? S.potEth : st.pending_fee_eth;
+  let pxEth = S.priceNative;
+  if (!pxEth && st.eth_usd) {
+    const usd = S.livePrice || S.data?.token?.price;
+    if (usd) pxEth = usd / st.eth_usd;
+  }
+  if (pot == null || !pxEth) return null;
+  const need = BURN_SIZE * pxEth;              // ETH cost of buying the fixed burn size
+  const buys = pot / pxEth;                    // FRONG the queued fees can buy right now
+  return { pot, need, buys, ethUsd: st.eth_usd,
+           pct: Math.max(0, Math.min(1, pot / need)), armed: pot >= need };
+}
+
+function renderBurnMeter() {
+  const els = document.querySelectorAll('.burnmeter');
+  if (!els.length) return;
+  const m = burnMeterState();
+  els.forEach(el => {
+    el.hidden = !m;
+    if (!m) return;
+    el.classList.toggle('armed', m.armed);
+    const fill = el.querySelector('.bm-fill');
+    if (fill) fill.style.width = (m.pct * 100).toFixed(2) + '%';
+    const pct = el.querySelector('.bm-pct');
+    if (pct) animateNum(pct, m.pct * 100, v => v.toFixed(1) + '%');
+    const bar = el.querySelector('.bm-track');
+    if (bar) {
+      bar.setAttribute('aria-valuenow', (m.pct * 100).toFixed(1));
+      bar.setAttribute('aria-valuetext',
+        `${(m.pct * 100).toFixed(1)}% — ${fmtAmt(m.buys)} of ${BURN_LBL} FRONG`);
+    }
+    const usd = v => m.ethUsd ? ` (${fmtUsd(v * m.ethUsd)})` : '';
+    el.querySelectorAll('[data-bm]').forEach(s => {
+      const k = s.dataset.bm;
+      if (k === 'sub') {
+        s.textContent = m.armed
+          ? 'Queued fees now cover the full 500,000 FRONG — the next claim can fire.'
+          : `${m.pot.toFixed(3)} ETH queued${usd(m.pot)} · buys ${fmtAmt(m.buys)} of the ` +
+            `${BURN_LBL} FRONG a burn needs`;
+      }
+      if (k === 'state') s.textContent = m.armed ? '🔥 BURN ARMED' : 'Progress to next burn';
+      if (k === 'queued') s.innerHTML = m.pot.toFixed(3) + ' ETH' +
+        (m.ethUsd ? `<span class="delta">${fmtUsd(m.pot * m.ethUsd)} waiting</span>` : '');
+      if (k === 'need') s.innerHTML = m.need.toFixed(3) + ' ETH' +
+        (m.ethUsd ? `<span class="delta">${fmtUsd(m.need * m.ethUsd)} at today's price</span>` : '');
+      if (k === 'buys') s.innerHTML = fmtAmt(m.buys) +
+        `<span class="delta">of ${BURN_LBL} needed</span>`;
+      if (k === 'gap') s.innerHTML = m.armed ? 'ready'
+        : (m.need - m.pot).toFixed(3) + ' ETH' + (m.ethUsd
+          ? `<span class="delta">${fmtUsd((m.need - m.pot) * m.ethUsd)} to go</span>` : '');
+    });
+  });
 }
 
 function renderInfra() {
@@ -834,11 +944,13 @@ async function pollPrice() {
     if (!pairs.length) throw new Error('no priced pairs');
     const p = pairs.reduce((a, b) => a.liquidity.usd > b.liquidity.usd ? a : b);
     S.livePrice = parseFloat(p.priceUsd);
+    const pn = parseFloat(p.priceNative);
+    if (isFinite(pn) && pn > 0) S.priceNative = pn;
     S.liveStats = { chg24: p.priceChange?.h24, liq: p.liquidity.usd,
       vol24: (d.pairs || []).reduce((s, x) => s + (x.volume?.h24 || 0), 0) };
     S.priceFails = 0;
     $('livedot').classList.add('on'); $('livedot').classList.remove('stale');
-    refreshLiveCells(); renderSignal(); renderDiamond(); renderApex();
+    refreshLiveCells(); renderSignal(); renderDiamond(); renderApex(); renderBurnMeter();
   } catch (e) {
     if (++S.priceFails > 2) { $('livedot').classList.add('stale'); $('livedot').classList.remove('on'); }
   }
@@ -996,8 +1108,10 @@ async function boot() {
   renderAggr(); renderTable(); renderDiamond(); renderFlywheel(); renderBurn(); renderInfra();
   $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at);
 
-  pollPrice();
+  renderBurnMeter();
+  pollPrice(); pollPot();
   setInterval(pollPrice, 30000);
+  setInterval(pollPot, 30000);
   setInterval(() => { $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at); }, 30000);
   let rt;
   window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderCharts, 200); });
