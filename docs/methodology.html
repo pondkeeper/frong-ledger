@@ -77,8 +77,8 @@
     (<code>minCurrency1BurnAmount</code>, immutable). Whoever fires a claim takes the queued
     ETH and, in the same transaction, buys those 500,000 FRONG on the open market and sends
     them to the dead address — so a claim is only worth making once the queued ETH covers
-    what 500,000 FRONG costs. That is the meter: <code>queued ETH ÷ (500,000 × FRONG price
-    in ETH)</code>.</p>
+    what 500,000 FRONG costs. That is the meter — on the site the queued ETH is called the <i>fee pot</i>:
+    <code>fee pot ÷ (500,000 × FRONG price in ETH)</code>.</p>
   <p>"Queued" is read live in your browser as <code>amounts(409801)</code> on all three
     contracts the fees pass through — the fee vault where they accrue, the vesting contract
     that releases them, and the buyback contract a claimer draws from. 409801 is FRONG's

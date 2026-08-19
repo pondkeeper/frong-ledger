@@ -152,9 +152,10 @@
     </div>
     <div class="card" id="burncard">
       <h2>The burn machine — supply only goes down</h2>
-      <p class="cardsub">Since Aug 12, 2026 the creator's fee share is renounced: it drips out as ETH
-        that anyone can claim only by burning 500k FRONG per claim. Burned coins sit at the dead
-        address forever. Nobody can mint more.</p>
+      <p class="cardsub">Since Aug 12, 2026 nobody collects FRONG's share of the trading fees — not
+        the creator, not the team. That money can leave the pot in exactly one way: spent on FRONG
+        that gets destroyed. Burned coins sit in a wallet nobody can ever open, and nobody can mint
+        more.</p>
 
       <div class="burnmeter bm-full" hidden>
         <div class="bm-top">
@@ -168,18 +169,22 @@
           <span class="bm-tick" style="left:25%"></span><span class="bm-tick" style="left:50%"></span>
           <span class="bm-tick" style="left:75%"></span>
         </div>
+        <p class="bm-line" data-bm="line">reading the pipeline…</p>
         <div class="fw-tiles bm-tiles">
-          <div class="tile"><div class="lbl">Fees queued</div><div class="val" data-bm="queued">—</div></div>
-          <div class="tile"><div class="lbl">Needed to fire</div><div class="val" data-bm="need">—</div></div>
-          <div class="tile"><div class="lbl">Queued fees buy</div><div class="val" data-bm="buys">—</div></div>
-          <div class="tile"><div class="lbl">Still to accrue</div><div class="val" data-bm="gap">—</div></div>
+          <div class="tile"><div class="lbl">1 · In the fee pot</div><div class="val" data-bm="pot">—</div></div>
+          <div class="tile"><div class="lbl">2 · That buys</div><div class="val" data-bm="buys">—</div></div>
+          <div class="tile"><div class="lbl">3 · A burn needs</div><div class="val" data-bm="needs">—</div></div>
+          <div class="tile"><div class="lbl">4 · Still short</div><div class="val" data-bm="togo">—</div></div>
         </div>
-        <p class="bm-note">The burn size is fixed at 500,000 FRONG per claim. Whoever fires it buys
-          those coins on the open market with the queued fees and sends them to the dead address, so
-          the machine can only go off once the queued ETH covers 500,000 FRONG at the current price.
-          The trigger is priced in FRONG, not dollars — <strong>cheaper FRONG means the bar is lower
-          and burns come sooner</strong>. Queued fees are read live from the three contracts the
-          money passes through; see the <a href="methodology.html">method</a>.</p>
+        <p class="bm-note"><strong>How it works, simply.</strong> Every trade pays a fee, and FRONG's
+          share piles up in a pot. Nobody is allowed to keep that money — the only way to take it is
+          to spend it buying FRONG on the open market and send those coins to a wallet nobody can
+          ever open. The amount is always the same: 500,000 FRONG. So the burn happens as soon as
+          the pot is big enough to buy 500,000 coins.</p>
+        <p class="bm-note">That's why the bar is measured in FRONG and not in dollars —
+          <strong>if the price falls, 500,000 FRONG gets cheaper, so the bar fills faster and burns
+          come sooner</strong>. The pot is read live from the three contracts the money passes
+          through; see the <a href="methodology.html">method</a>.</p>
       </div>
 
       <div class="fw-tiles" id="burntiles"></div>

@@ -883,25 +883,26 @@ function renderBurnMeter() {
       bar.setAttribute('aria-valuetext',
         `${(m.pct * 100).toFixed(1)}% — ${fmtAmt(m.buys)} of ${BURN_LBL} FRONG`);
     }
-    const usd = v => m.ethUsd ? ` (${fmtUsd(v * m.ethUsd)})` : '';
+    const short = Math.max(0, BURN_SIZE - m.buys);
     el.querySelectorAll('[data-bm]').forEach(s => {
       const k = s.dataset.bm;
-      if (k === 'sub') {
-        s.textContent = m.armed
-          ? 'Queued fees now cover the full 500,000 FRONG — the next claim can fire.'
-          : `${m.pot.toFixed(3)} ETH queued${usd(m.pot)} · buys ${fmtAmt(m.buys)} of the ` +
-            `${BURN_LBL} FRONG a burn needs`;
-      }
       if (k === 'state') s.textContent = m.armed ? '🔥 BURN ARMED' : 'Progress to next burn';
-      if (k === 'queued') s.innerHTML = m.pot.toFixed(3) + ' ETH' +
-        (m.ethUsd ? `<span class="delta">${fmtUsd(m.pot * m.ethUsd)} waiting</span>` : '');
-      if (k === 'need') s.innerHTML = m.need.toFixed(3) + ' ETH' +
-        (m.ethUsd ? `<span class="delta">${fmtUsd(m.need * m.ethUsd)} at today's price</span>` : '');
-      if (k === 'buys') s.innerHTML = fmtAmt(m.buys) +
-        `<span class="delta">of ${BURN_LBL} needed</span>`;
-      if (k === 'gap') s.innerHTML = m.armed ? 'ready'
-        : (m.need - m.pot).toFixed(3) + ' ETH' + (m.ethUsd
-          ? `<span class="delta">${fmtUsd((m.need - m.pot) * m.ethUsd)} to go</span>` : '');
+      /* One plain sentence, same story in both places: pot -> what it buys -> the target. */
+      if (k === 'sub' || k === 'line') {
+        s.textContent = m.armed
+          ? `The pot can buy all ${BURN_LBL} FRONG — the next burn can happen any moment.`
+          : `The fee pot can buy ${fmtAmt(m.buys)} FRONG so far — ` +
+            `a burn happens at ${BURN_LBL}.`;
+      }
+      /* Three of the four tiles are in FRONG on purpose, so buys + short = the target. */
+      if (k === 'pot') s.innerHTML = m.pot.toFixed(3) + ' ETH' +
+        (m.ethUsd ? `<span class="delta">${fmtUsd(m.pot * m.ethUsd)} of fees collected</span>` : '');
+      if (k === 'buys') s.innerHTML = fmtAmt(m.buys) + ' FRONG' +
+        `<span class="delta">what the pot buys today</span>`;
+      if (k === 'needs') s.innerHTML = BURN_LBL + ' FRONG' +
+        `<span class="delta">the size of every burn</span>`;
+      if (k === 'togo') s.innerHTML = m.armed ? 'none' : fmtAmt(short) + ' FRONG' +
+        `<span class="delta">${(m.need - m.pot).toFixed(3)} ETH more in fees</span>`;
     });
   });
 }

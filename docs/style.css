@@ -396,7 +396,8 @@ tr.detail>td{padding:0;background:var(--surface-2);text-align:left;white-space:n
   border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin:0 0 18px;
   color:inherit;font:inherit;max-width:100%}
 .burnmeter span,.burnmeter div{min-width:0}
-.bm-bot>span{flex:1 1 240px}
+.bm-bot>span{flex:0 1 auto;min-width:0}
+.bm-cta{flex:none}
 .bm-hero{cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .2s}
 .bm-hero:hover{border-color:rgba(255,154,60,.42);box-shadow:0 0 18px rgba(255,154,60,.10)}
 .bm-hero:active{transform:translateY(1px)}
@@ -428,11 +429,13 @@ tr.detail>td{padding:0;background:var(--surface-2);text-align:left;white-space:n
   font-family:'Plex Mono',monospace;font-size:11.5px;color:var(--ink-2)}
 .bm-cta{margin-left:auto;color:var(--bm);letter-spacing:.08em;text-transform:uppercase;
   font-size:10.5px;white-space:nowrap}
-.bm-tiles{margin:14px 0 0}
+.bm-line{font-size:13.5px;color:var(--ink);margin:11px 0 0;max-width:78ch}
+.bm-tiles{margin:12px 0 0}
 .bm-tiles .tile{background:var(--surface)}
 .bm-tiles .tile:first-child .val{text-shadow:none}
 .bm-tiles .tile .delta{display:block;margin:3px 0 0;color:var(--muted)}
 .bm-note{font-size:12.5px;color:var(--ink-2);margin:14px 0 0;max-width:78ch}
+.bm-note+.bm-note{margin-top:9px}
 .bm-note strong{color:var(--ink);font-weight:600}
 
 .burnmeter.armed{--bm:#ff5f3c;border-color:rgba(255,95,60,.45)}
