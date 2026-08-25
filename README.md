@@ -31,7 +31,7 @@ that don't reconcile are flagged, not hidden.
 (no account), the pondkeeper approves it, and it shows up for everyone to download /
 copy / share / post. The static site ships no memes of its own.
 
-The drop box is a tiny Cloudflare Worker (`worker/`, R2 + KV, free tier) — see
+The drop box is a tiny Cloudflare Worker (`worker/`, KV only, free tier, no card) — see
 `worker/README.md` for the one-time deploy and the moderation page. `docs/memes.js`
 points at it via `const API`.
 

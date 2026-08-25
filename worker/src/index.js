@@ -1,5 +1,6 @@
 /* Frong Meme Pond — drop box + gallery API.
-   Cloudflare Worker + R2 (files) + KV (metadata). No accounts for submitters.
+   Cloudflare Worker + KV only (files under f:<id>, metadata under m:<id>) — no R2, so
+   the account never needs a payment method. No accounts for submitters.
    Nothing is served publicly until the pondkeeper approves it on /admin.
 
    Routes
@@ -60,7 +61,8 @@ const isAdmin = (req, env, url) => {
   return !!env.ADMIN_KEY && safeEq(k, env.ADMIN_KEY);
 };
 
-/* ---------- metadata (KV) ----------
+/* ---------- storage (KV) ----------
+   f:<id>  → raw image bytes (KV values go up to 25 MiB; we cap uploads at 4 MB).
    m:<id>  → JSON meta; KV metadata field mirrors {s:status} so list() is enough for counts.
    approved → cached JSON array of approved metas (newest first), rebuilt on moderation. */
 async function listAll(env) {
@@ -120,7 +122,7 @@ async function submit(req, env, url) {
     title: clean(form.get('title'), TITLE_MAX), credit: clean(form.get('credit'), CREDIT_MAX),
     status: 'pending', at: Date.now(), iph,
   };
-  await env.BUCKET.put(id, buf, { httpMetadata: { contentType: TYPES[fmt] } });
+  await env.MEMES.put('f:' + id, buf);
   await putMeta(env, meta);
   await env.MEMES.put(rlKey, String(used + 1), { expirationTtl: 3700 });
   return json({ ok: true, id }, 200, h);
@@ -138,19 +140,26 @@ async function serveImage(req, env, url, id) {
   const meta = await getMeta(env, id);
   if (!meta) return new Response('not found', { status: 404, headers: h });
   if (meta.status !== 'approved' && !isAdmin(req, env, url)) return new Response('not found', { status: 404, headers: h });
-  const obj = await env.BUCKET.get(id);
-  if (!obj) return new Response('gone', { status: 404, headers: h });
+  // approved images are immutable → let the edge cache absorb repeat reads (KV free tier = 100k reads/day)
+  const cacheable = meta.status === 'approved';
+  const cache = caches.default;
+  const ckey = new Request(url.origin + '/m/' + id + (url.searchParams.get('dl') ? '?dl=1' : ''), { method: 'GET' });
+  if (cacheable) { const hit = await cache.match(ckey); if (hit) { const r = new Response(hit.body, hit); Object.entries(h).forEach(([k, v]) => r.headers.set(k, v)); return r; } }
+  const buf = await env.MEMES.get('f:' + id, 'arrayBuffer');
+  if (!buf) return new Response('gone', { status: 404, headers: h });
   const name = `${slug(meta.title)}-${id.slice(0, 6)}.${meta.fmt}`;
   const headers = {
     ...h,
     'content-type': TYPES[meta.fmt],
-    'content-length': String(obj.size),
+    'content-length': String(buf.byteLength),
     'x-content-type-options': 'nosniff',
     'content-security-policy': "default-src 'none'; sandbox",
     'cache-control': meta.status === 'approved' ? 'public, max-age=31536000, immutable' : 'no-store',
     'content-disposition': (url.searchParams.get('dl') ? 'attachment' : 'inline') + `; filename="${name}"`,
   };
-  return new Response(obj.body, { headers });
+  const res = new Response(buf, { headers });
+  if (cacheable) await cache.put(ckey, res.clone());
+  return res;
 }
 
 async function adminList(env) {
@@ -173,7 +182,7 @@ async function moderate(req, env) {
     meta.status = 'approved'; meta.approvedAt = Date.now();
     await putMeta(env, meta);
   } else if (body.action === 'reject' || body.action === 'remove') {
-    await env.BUCKET.delete(id);
+    await env.MEMES.delete('f:' + id);
     await env.MEMES.delete('m:' + id);
   } else return json({ ok: false, error: 'bad action' }, 400);
   await rebuildApproved(env);
