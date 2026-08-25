@@ -529,6 +529,22 @@ footer .cols{display:flex;flex-wrap:wrap;gap:10px 34px}
 .submitrow{display:flex;align-items:center;gap:14px 18px;flex-wrap:wrap}
 .submitfine{font-size:12px;color:var(--muted);max-width:52ch}
 .submitalt{font-family:'Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.dropzone{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  min-height:150px;padding:18px;border:2px dashed rgba(168,224,90,.4);border-radius:6px;background:var(--surface-2);
+  cursor:pointer;text-align:center;transition:.15s}
+.dropzone:hover,.dropzone.over{border-color:var(--accent);background:var(--accent-soft);box-shadow:var(--glow)}
+.dropzone.closed{cursor:default;border-style:solid;border-color:var(--border);color:var(--muted)}
+.dropzone.closed .dropfine{display:none}
+.dropcopy{font-size:14.5px;font-weight:600;color:var(--ink)}
+.dropfine{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.dropzone.has .dropcopy,.dropzone.has .dropfine{display:none}
+.uppreview{max-width:100%;max-height:320px;height:auto;border-radius:4px;display:block}
+.upform{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.upform[hidden],.uppreview[hidden],.memeempty[hidden]{display:none}
+.upform .memesearch{max-width:none;flex:1 1 220px}
+.uprow{display:flex;gap:10px;align-items:center;flex:1 0 100%}
+.upstatus{font-size:12.5px;color:var(--ink-2);margin:10px 0 0;min-height:1.2em}
+.upstatus.bad{color:var(--down)}.upstatus.good{color:var(--accent)}
 .lightbox{background:var(--surface);color:var(--ink);border:1px solid var(--baseline);border-radius:6px;
   padding:14px 16px 16px;width:min(1100px,calc(100vw - 32px));max-height:calc(100vh - 32px);box-shadow:var(--shadow)}
 .lightbox::backdrop{background:rgba(7,10,6,.86);backdrop-filter:blur(3px)}

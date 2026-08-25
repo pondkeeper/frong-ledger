@@ -27,16 +27,13 @@ that don't reconcile are flagged, not hidden.
 
 ## Meme Pond
 
-`docs/memes.html` is a free-to-use gallery of community FRONG memes (download / copy to
-clipboard / share sheet / post to X), served straight from the repo — no backend.
+`docs/memes.html` is a community meme gallery: anyone can submit an image from the page
+(no account), the pondkeeper approves it, and it shows up for everyone to download /
+copy / share / post. The static site ships no memes of its own.
 
-- Images live in `docs/memes/`; `docs/memes/manifest.json` lists them and is rebuilt by
-  `python3 pipeline/memes.py` (stdlib only — reads dimensions from the file headers).
-- To add a meme: drop the file in `docs/memes/`, run the script, optionally edit the
-  entry's `title` / `credit` in the manifest, commit. Files named `template-*` show up
-  under the Templates filter; GIFs under GIFs.
-- Community submissions arrive as GitHub issues via `.github/ISSUE_TEMPLATE/meme.yml`
-  (drag-and-drop image, title, optional credit, pond rules).
+The drop box is a tiny Cloudflare Worker (`worker/`, R2 + KV, free tier) — see
+`worker/README.md` for the one-time deploy and the moderation page. `docs/memes.js`
+points at it via `const API`.
 
 ## Data sources
 

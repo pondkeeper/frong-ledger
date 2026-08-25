@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Frong Ledger — Meme Pond</title>
-<meta name="description" content="Free FRONG memes, pond-cam templates and a square pfp — download, copy or share straight to X and Telegram. Community-submitted, free to use.">
+<meta name="description" content="The community FRONG meme pond — toss yours in from your phone, grab anyone's: download, copy or share straight to X and Telegram. Free to use.">
 <meta property="og:title" content="The Meme Pond — free FRONG memes">
-<meta property="og:description" content="Grab a FRONG meme: download, copy to clipboard or share straight to your socials. Pond-cam templates included. Toss your own in.">
+<meta property="og:description" content="Community FRONG memes: toss yours in from your phone, grab anyone's — download, copy or share straight to your socials. Free to use.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://pondkeeper.github.io/frong-ledger/memes/whales-are-accumulating.jpg">
+<meta property="og:image" content="https://pondkeeper.github.io/frong-ledger/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body data-light>
 
@@ -38,7 +38,7 @@
   <div class="pagehead">
     <h1>The Meme <span class="dim">Pond</span></h1>
     <p class="tagline">FREE TO USE · DOWNLOAD · COPY · SHARE · TOSS YOUR OWN IN</p>
-    <p class="scanpromo">Every frog in here is free for the community — post them, remix them, no credit needed.</p>
+    <p class="scanpromo">Made by the community, for the community. Everything here is free to post and remix. <a href="#submit">Toss yours in ↓</a></p>
   </div>
 
   <div class="memehow" aria-label="How to use">
@@ -51,8 +51,7 @@
     <div class="cardhead memetools">
       <div class="pills" role="group" aria-label="Filter">
         <button data-filter="all" aria-pressed="true">All</button>
-        <button data-filter="meme" aria-pressed="false">Memes</button>
-        <button data-filter="template" aria-pressed="false">Templates</button>
+        <button data-filter="meme" aria-pressed="false">Stills</button>
         <button data-filter="gif" aria-pressed="false">GIFs</button>
       </div>
       <input id="memesearch" class="memesearch mono" type="search" placeholder="search the pond…" aria-label="Search memes" autocomplete="off">
@@ -60,23 +59,33 @@
       <span class="memecount mono" id="memecount">loading the pond…</span>
     </div>
     <div class="memegrid" id="memegrid" aria-live="polite"></div>
-    <p class="memeempty" id="memeempty" hidden>Nothing in the pond matches that. Try another word — or toss the first one in below.</p>
+    <p class="memeempty" id="memeempty" hidden></p>
   </div>
 
   <div class="card submitcard" id="submit">
     <h2>Got a frog? Toss it in the pond</h2>
-    <p class="cardsub">Community memes get added here for everyone to grab. Anything goes as long as it's FRONG, it's yours to share,
-      and it isn't NSFW or hateful. The pondkeeper reviews submissions and drops the good ones in.</p>
-    <div class="submitrow">
-      <a class="btn" id="submitgh" href="https://github.com/pondkeeper/frong-ledger/issues/new?template=meme.yml" target="_blank" rel="noopener">🪰 submit a meme ↗</a>
-      <a class="submitalt" id="submitalt" href="#" hidden target="_blank" rel="noopener"></a>
-      <span class="submitfine">Opens a GitHub form — drag your image into the box and hit submit. Free account, takes a minute.</span>
+    <p class="cardsub">Pick an image from your phone or computer and hit send — no account, nothing to sign up for.
+      The pondkeeper looks at every submission before it goes live (FRONG-related, not NSFW, not hateful, yours to share).</p>
+    <div class="dropzone" id="drop" tabindex="0" role="button" aria-label="Pick or drop an image">
+      <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+      <img id="uppreview" class="uppreview" alt="" hidden>
+      <span class="dropcopy">📸 tap to pick a frog — or drop / paste an image here</span>
+      <span class="dropfine mono">PNG · JPG · GIF · WebP · up to 4 MB</span>
     </div>
+    <div class="upform" id="upform" hidden>
+      <input id="uptitle" class="memesearch mono" type="text" maxlength="80" placeholder="title (optional)" autocomplete="off">
+      <input id="upcredit" class="memesearch mono" type="text" maxlength="40" placeholder="your handle for credit (optional)" autocomplete="off">
+      <div class="uprow">
+        <button class="btn" id="upsend" disabled>🪰 toss it in</button>
+        <button class="mbtn" id="upcancel">cancel</button>
+      </div>
+    </div>
+    <p class="upstatus mono" id="upstatus"></p>
   </div>
 
   <footer>
     <div class="cols">
-      <span>Memes are community-made and free to use. Templates built from the pond cam.</span>
+      <span>Every meme here was tossed in by the community and is free to use.</span>
       <span><a href="methodology.html">Methodology &amp; limitations</a></span>
       <span><a href="https://github.com/pondkeeper/frong-ledger" rel="noopener">open source ↗</a></span>
       <span id="gen"></span>
@@ -123,6 +132,6 @@
 <div class="toast mono" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="app.js?v=20"></script>
-<script src="memes.js?v=1"></script>
+<script src="memes.js?v=2"></script>
 </body>
 </html>

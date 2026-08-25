@@ -1,0 +1,15 @@
+name = "frong-meme-pond"
+main = "src/index.js"
+compatibility_date = "2025-08-01"
+
+# public site allowed to call the API (comma-separated). Local dev overrides via .dev.vars
+[vars]
+ALLOWED_ORIGINS = "https://pondkeeper.github.io"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "frong-meme-pond"
+
+[[kv_namespaces]]
+binding = "MEMES"
+id = "REPLACE_WITH_KV_ID"   # deploy.sh fills this in
