@@ -25,6 +25,19 @@ that don't reconcile are flagged, not hidden.
   tape are fetched client-side directly from the same public APIs, so the page is
   fresher than the last cron run.
 
+## Meme Pond
+
+`docs/memes.html` is a free-to-use gallery of community FRONG memes (download / copy to
+clipboard / share sheet / post to X), served straight from the repo — no backend.
+
+- Images live in `docs/memes/`; `docs/memes/manifest.json` lists them and is rebuilt by
+  `python3 pipeline/memes.py` (stdlib only — reads dimensions from the file headers).
+- To add a meme: drop the file in `docs/memes/`, run the script, optionally edit the
+  entry's `title` / `credit` in the manifest, commit. Files named `template-*` show up
+  under the Templates filter; GIFs under GIFs.
+- Community submissions arrive as GitHub issues via `.github/ISSUE_TEMPLATE/meme.yml`
+  (drag-and-drop image, title, optional credit, pond rules).
+
 ## Data sources
 
 - [Robinhood Chain Blockscout](https://robinhoodchain.blockscout.com) — transfers, holders, balances

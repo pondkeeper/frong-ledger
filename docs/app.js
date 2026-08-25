@@ -951,6 +951,7 @@ async function pollPrice() {
       vol24: (d.pairs || []).reduce((s, x) => s + (x.volume?.h24 || 0), 0) };
     S.priceFails = 0;
     $('livedot').classList.add('on'); $('livedot').classList.remove('stale');
+    if (!S.data) { const lp = $('liveprice'); if (lp) lp.textContent = 'FRONG ' + fmtPx(S.livePrice); return; }
     refreshLiveCells(); renderSignal(); renderDiamond(); renderApex(); renderBurnMeter();
   } catch (e) {
     if (++S.priceFails > 2) { $('livedot').classList.add('stale'); $('livedot').classList.remove('on'); }
@@ -1094,6 +1095,8 @@ if ($('flowrange'))
 
 /* ---------------- boot ---------------- */
 async function boot() {
+  // light pages (data-light on <body>, e.g. memes.html) only want the header price chip
+  if ('light' in document.body.dataset) { pollPrice(); setInterval(pollPrice, 30000); return; }
   const cb = Math.floor(Date.now() / 300000); // 5-min bucket busts the Pages CDN cache
   const dr = await fetch('data/data.json?t=' + cb);
   S.data = await dr.json();

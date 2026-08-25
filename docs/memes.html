@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Frong Ledger — Meme Pond</title>
+<meta name="description" content="Free FRONG memes, pond-cam templates and a square pfp — download, copy or share straight to X and Telegram. Community-submitted, free to use.">
+<meta property="og:title" content="The Meme Pond — free FRONG memes">
+<meta property="og:description" content="Grab a FRONG meme: download, copy to clipboard or share straight to your socials. Pond-cam templates included. Toss your own in.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://pondkeeper.github.io/frong-ledger/memes/whales-are-accumulating.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
+<meta name="theme-color" content="#070a06">
+<link rel="stylesheet" href="style.css?v=16">
+</head>
+<body data-light>
+
+<div class="sitehead">
+  <div class="inner">
+    <span class="wordmark">🐸 <a href="index.html" style="color:inherit">Frong Ledger</a></span>
+    <span class="livechip"><span class="livedot" id="livedot"></span><span id="liveprice">—</span></span>
+    <span id="tipline" hidden><button id="tipbtn" class="tipbtn">🪰 <span
+      class="tip-verbose">toss a fly to the pondkeeper</span><span class="tip-brief">tip the frog</span></button></span>
+  </div>
+</div>
+
+<div class="wrap">
+  <nav class="tabbar" aria-label="Views">
+    <a class="tabbtn" href="index.html#signal">📡 The Signal</a>
+    <a class="tabbtn" href="index.html#scanner">🔍 Scan your wallet</a>
+    <a class="tabbtn" href="index.html#diamond">💎 Diamond hands</a>
+    <a class="tabbtn" href="index.html#flywheel">🔄 Flywheel</a>
+    <a class="tablink" href="ledger.html">📒 The Ledger ↗</a>
+    <span class="tablink on" aria-current="page">🖼 Meme pond</span>
+  </nav>
+
+  <div class="pagehead">
+    <h1>The Meme <span class="dim">Pond</span></h1>
+    <p class="tagline">FREE TO USE · DOWNLOAD · COPY · SHARE · TOSS YOUR OWN IN</p>
+    <p class="scanpromo">Every frog in here is free for the community — post them, remix them, no credit needed.</p>
+  </div>
+
+  <div class="memehow" aria-label="How to use">
+    <span><b>1</b> pick a frog</span>
+    <span><b>2</b> <kbd>copy</kbd> on desktop · <kbd>share</kbd> on your phone · or <kbd>download</kbd></span>
+    <span><b>3</b> paste it into your post — 🐸</span>
+  </div>
+
+  <div class="card" id="pond">
+    <div class="cardhead memetools">
+      <div class="pills" role="group" aria-label="Filter">
+        <button data-filter="all" aria-pressed="true">All</button>
+        <button data-filter="meme" aria-pressed="false">Memes</button>
+        <button data-filter="template" aria-pressed="false">Templates</button>
+        <button data-filter="gif" aria-pressed="false">GIFs</button>
+      </div>
+      <input id="memesearch" class="memesearch mono" type="search" placeholder="search the pond…" aria-label="Search memes" autocomplete="off">
+      <span class="spacer"></span>
+      <span class="memecount mono" id="memecount">loading the pond…</span>
+    </div>
+    <div class="memegrid" id="memegrid" aria-live="polite"></div>
+    <p class="memeempty" id="memeempty" hidden>Nothing in the pond matches that. Try another word — or toss the first one in below.</p>
+  </div>
+
+  <div class="card submitcard" id="submit">
+    <h2>Got a frog? Toss it in the pond</h2>
+    <p class="cardsub">Community memes get added here for everyone to grab. Anything goes as long as it's FRONG, it's yours to share,
+      and it isn't NSFW or hateful. The pondkeeper reviews submissions and drops the good ones in.</p>
+    <div class="submitrow">
+      <a class="btn" id="submitgh" href="https://github.com/pondkeeper/frong-ledger/issues/new?template=meme.yml" target="_blank" rel="noopener">🪰 submit a meme ↗</a>
+      <a class="submitalt" id="submitalt" href="#" hidden target="_blank" rel="noopener"></a>
+      <span class="submitfine">Opens a GitHub form — drag your image into the box and hit submit. Free account, takes a minute.</span>
+    </div>
+  </div>
+
+  <footer>
+    <div class="cols">
+      <span>Memes are community-made and free to use. Templates built from the pond cam.</span>
+      <span><a href="methodology.html">Methodology &amp; limitations</a></span>
+      <span><a href="https://github.com/pondkeeper/frong-ledger" rel="noopener">open source ↗</a></span>
+      <span id="gen"></span>
+    </div>
+    <p>Not financial advice. Frogs are, however, financial advice. 🐸</p>
+  </footer>
+</div>
+
+<dialog id="lightbox" class="lightbox" aria-labelledby="lb-title">
+  <div class="lb-head">
+    <h2 id="lb-title" class="mono">—</h2>
+    <span class="lb-meta mono" id="lb-meta"></span>
+    <button id="lb-close" class="tj-close" aria-label="Close">✕</button>
+  </div>
+  <div class="lb-stage">
+    <button class="lb-nav prev" id="lb-prev" aria-label="Previous">‹</button>
+    <img id="lb-img" alt="">
+    <button class="lb-nav next" id="lb-next" aria-label="Next">›</button>
+  </div>
+  <div class="memeacts" id="lb-acts"></div>
+</dialog>
+
+<dialog id="tipjar" class="tipjar" aria-labelledby="tipjar-title">
+  <div class="tj-head">
+    <span class="tj-frog" aria-hidden="true">🐸</span>
+    <h2 id="tipjar-title">Toss a fly in the pond</h2>
+    <button id="tipclose" class="tj-close" aria-label="Close">✕</button>
+  </div>
+  <p>The Frong Ledger is free and open-source. No ads, no paywall, no token to sell you —
+    and that never changes.</p>
+  <p>If the pond has been useful and you feel like it, you can toss the pondkeeper a fly.
+    Tips go toward keeping the tracker fed and running, and building new free tools for the
+    FRONG community. Completely optional: tipping unlocks nothing, and skipping it costs you
+    nothing. The frog loves you either way.</p>
+  <div class="tj-addr mono" id="tipaddr"></div>
+  <div class="tj-actions">
+    <button id="tipcopy" class="tj-copy">copy address</button>
+    <a id="tipexplore" href="#" rel="noopener" target="_blank">watch the tip jar on-chain ↗</a>
+  </div>
+  <p class="tj-fine">ETH or FRONG on Robinhood Chain. Every fly lands in a public wallet —
+    audit it like everything else here.</p>
+</dialog>
+
+<div class="toast mono" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="app.js?v=20"></script>
+<script src="memes.js?v=1"></script>
+</body>
+</html>

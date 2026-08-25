@@ -493,6 +493,70 @@ footer .cols{display:flex;flex-wrap:wrap;gap:10px 34px}
 .tj-copy:hover{box-shadow:var(--glow)}
 .tj-fine{font-size:12px !important;color:var(--muted) !important}
 
+/* ---------- meme pond ---------- */
+.tabbar .tablink ~ .tablink{margin-left:0}
+.memehow{display:flex;flex-wrap:wrap;gap:8px 26px;margin:-6px 0 22px;font-family:'Plex Mono',monospace;
+  font-size:12px;color:var(--ink-2);letter-spacing:.02em}
+.memehow b{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;
+  border-radius:50%;background:var(--accent-chip);color:var(--accent);font-size:11px;margin-right:6px}
+.memehow kbd{font:inherit;background:var(--surface-2);border:1px solid var(--baseline);border-radius:3px;padding:0 5px}
+.memetools{align-items:center;margin-bottom:14px}
+.memesearch{font-size:12.5px;background:var(--surface-2);border:1px solid var(--border);border-radius:3px;
+  color:var(--ink);padding:6px 10px;min-width:180px;flex:1 1 180px;max-width:320px}
+.memesearch::placeholder{color:var(--muted)}
+.memecount{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.memegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.meme{margin:0;background:var(--surface-2);border:1px solid var(--border);border-radius:5px;overflow:hidden;
+  display:flex;flex-direction:column}
+.meme:hover{border-color:rgba(168,224,90,.35)}
+.memepic{display:block;position:relative;width:100%;background:#000;line-height:0}
+.memepic img{display:block;width:100%;height:auto;object-fit:cover;max-height:260px;transition:opacity .2s}
+.memepic:hover img{opacity:.88}
+.mtag{position:absolute;top:8px;left:8px;font-family:'Plex Mono',monospace;font-size:10px;letter-spacing:.14em;
+  background:rgba(7,10,6,.82);color:var(--accent);border:1px solid rgba(168,224,90,.35);border-radius:3px;padding:2px 6px;line-height:1.4}
+.meme figcaption{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px}
+.memetitle{font-size:13.5px;font-weight:600;color:var(--ink)}
+.mememeta{font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+.memeacts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mbtn{font-family:'Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-2);background:var(--surface-3);border:1px solid var(--border);border-radius:3px;padding:6px 9px;
+  white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.mbtn:hover{color:var(--ink);border-color:rgba(168,224,90,.45);text-decoration:none}
+.mbtn.x{color:var(--accent)}
+.mbtn.busy{opacity:.5;pointer-events:none}
+.memeempty{font-family:'Plex Mono',monospace;font-size:12.5px;color:var(--muted);margin:14px 0 4px}
+.submitcard{border-color:rgba(168,224,90,.35)}
+.submitrow{display:flex;align-items:center;gap:14px 18px;flex-wrap:wrap}
+.submitfine{font-size:12px;color:var(--muted);max-width:52ch}
+.submitalt{font-family:'Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.lightbox{background:var(--surface);color:var(--ink);border:1px solid var(--baseline);border-radius:6px;
+  padding:14px 16px 16px;width:min(1100px,calc(100vw - 32px));max-height:calc(100vh - 32px);box-shadow:var(--shadow)}
+.lightbox::backdrop{background:rgba(7,10,6,.86);backdrop-filter:blur(3px)}
+.lb-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.lb-head h2{margin:0;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lb-meta{font-size:11px;color:var(--muted);flex:1}
+.lb-stage{position:relative;background:#000;border-radius:4px;display:flex;align-items:center;justify-content:center}
+.lb-stage img{display:block;max-width:100%;max-height:calc(100vh - 190px);height:auto;margin:0 auto}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);font-size:34px;line-height:1;color:var(--ink);
+  background:rgba(7,10,6,.6);border:1px solid var(--border);border-radius:4px;width:40px;height:56px}
+.lb-nav.prev{left:8px}.lb-nav.next{right:8px}
+.lb-nav:hover{border-color:var(--accent)}
+.lb-nav[disabled]{opacity:.25;cursor:default}
+.lightbox .memeacts{margin-top:12px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,12px);z-index:70;opacity:0;transition:.25s;
+  background:var(--surface-3);color:var(--ink);border:1px solid rgba(168,224,90,.45);border-radius:4px;
+  padding:9px 14px;font-size:12.5px;box-shadow:var(--shadow);pointer-events:none;max-width:calc(100vw - 32px);text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:640px){
+  .memegrid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+  .memepic img{max-height:200px}
+  .meme figcaption{padding:8px 9px 10px}
+  .mbtn{padding:6px 7px;font-size:10.5px}
+  .memehow{gap:6px 18px}
+  .lightbox{padding:10px}
+  .lb-nav{width:32px;height:46px;font-size:26px}
+}
+
 /* ---------- methodology page ---------- */
 .prose{max-width:72ch}
 .prose h1{font-family:'Plex Mono',monospace;font-size:24px;letter-spacing:.06em;text-transform:uppercase}
