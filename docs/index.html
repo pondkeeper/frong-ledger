@@ -12,7 +12,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=17">
+<link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 
@@ -40,8 +40,11 @@
     <p class="tagline">THE CAMERA POINTED AT THE 50 BIGGEST FRONG WALLETS
       <a class="method" href="methodology.html">HOW →</a></p>
     <div class="verdict" id="verdict" aria-live="polite"></div>
-    <button class="btn heroscan-cta" data-tab="scanner" data-scroll="lookup">
-      🔍 Scan your wallet — PnL in 5 seconds</button>
+    <div class="herobtns">
+      <button class="btn heroscan-cta" data-tab="scanner" data-scroll="lookup">
+        🔍 Scan your wallet — PnL in 5 seconds</button>
+      <a class="btn heroscan-cta hero-alt" href="memes.html">🖼 Meme pond — grab &amp; toss frogs</a>
+    </div>
     <div class="hudstats" id="stats" aria-label="Market stats"></div>
   </div>
 </section>
@@ -65,13 +68,19 @@
       <span class="bm-cta">how the burn works →</span></span>
   </button>
 
+  <a class="pondbanner" href="memes.html">
+    <span class="pb-frog" aria-hidden="true">🐸</span>
+    <span class="pb-text"><b>The Meme Pond is open.</b> Community FRONG memes — grab any for your posts, toss in your own. No account needed.</span>
+    <span class="pb-cta">enter the pond →</span>
+  </a>
+
   <nav class="tabbar" role="tablist" aria-label="Views">
     <button role="tab" data-tab="signal" aria-selected="true">📡 The Signal</button>
     <button role="tab" data-tab="scanner" aria-selected="false">🔍 Scan your wallet</button>
     <button role="tab" data-tab="diamond" aria-selected="false">💎 Diamond hands</button>
     <button role="tab" data-tab="flywheel" aria-selected="false">🔄 Flywheel · 🔥 Burn</button>
     <a class="tablink" href="ledger.html">📒 The Ledger · all 50 whales ↗</a>
-    <a class="tablink" href="memes.html">🖼 Memes ↗</a>
+    <a class="tablink" href="memes.html">🐸 Meme pond ↗</a>
   </nav>
 
   <section class="tabpane active" id="pane-signal">

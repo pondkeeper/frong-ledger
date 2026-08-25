@@ -179,6 +179,25 @@ nav.sections a:hover{color:var(--accent);text-decoration:none}
 .heroscan-cta{margin:16px 0 2px;padding:13px 24px;font-size:13.5px;
   box-shadow:0 0 18px rgba(168,224,90,.28)}
 .heroscan-cta:hover{opacity:1;box-shadow:0 0 26px rgba(168,224,90,.45)}
+.herobtns{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center;margin:16px 0 2px}
+.herobtns .heroscan-cta{margin:0}
+.btn.hero-alt{background:rgba(7,10,6,.72);color:var(--accent);border:1px solid rgba(168,224,90,.6);
+  box-shadow:0 0 14px rgba(168,224,90,.18);text-decoration:none}
+.btn.hero-alt:hover{background:var(--accent-chip);text-decoration:none;box-shadow:0 0 22px rgba(168,224,90,.4)}
+@media (max-width:640px){.herobtns .heroscan-cta{width:100%;text-align:center}}
+
+/* ---------- meme pond banner ---------- */
+.pondbanner{display:flex;align-items:center;gap:14px;margin:0 0 18px;padding:12px 16px;
+  background:linear-gradient(90deg,rgba(168,224,90,.12),rgba(168,224,90,.03));
+  border:1px solid rgba(168,224,90,.5);border-radius:6px;color:var(--ink);text-decoration:none;
+  box-shadow:0 0 16px rgba(168,224,90,.12)}
+.pondbanner:hover{text-decoration:none;border-color:var(--accent);box-shadow:0 0 24px rgba(168,224,90,.3)}
+.pb-frog{font-size:26px;line-height:1;flex:none}
+.pb-text{flex:1;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.pb-text b{color:var(--ink);font-family:'Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;font-size:12.5px;margin-right:6px}
+.pb-cta{flex:none;font-family:'Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--page);background:var(--accent);border-radius:3px;padding:8px 14px;white-space:nowrap}
+@media (max-width:640px){.pondbanner{flex-wrap:wrap;gap:10px 12px}.pb-text{flex:1 1 200px}.pb-cta{width:100%;text-align:center}}
 
 /* ---------- apex specimen spotlight ---------- */
 .apexcard{border-color:rgba(168,224,90,.45);
