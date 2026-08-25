@@ -5,7 +5,7 @@
    with the file (phones → X / Telegram sheet). Download = worker ?dl=1. */
 'use strict';
 
-const API = '';                               // drop-box worker URL, e.g. 'https://frong-meme-pond.<acct>.workers.dev' — empty = submissions closed
+const API = 'https://frong-meme-pond.pondkeeper.workers.dev'; // drop-box worker (worker/) — empty = submissions closed
 const SITE_URL = 'https://pondkeeper.github.io/frong-ledger/memes.html';
 const POST_TEXT = '$FRONG 🐸';                 // prefilled text for the X composer
 const MAX_MB = 4;
