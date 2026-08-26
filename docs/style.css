@@ -514,7 +514,7 @@ footer .cols{display:flex;flex-wrap:wrap;gap:10px 34px}
 
 /* ---------- meme pond ---------- */
 .tabbar .tablink ~ .tablink{margin-left:0}
-.memehow{display:flex;flex-wrap:wrap;gap:8px 26px;margin:-6px 0 22px;font-family:'Plex Mono',monospace;
+.memehow{display:flex;flex-wrap:wrap;gap:8px 26px;margin:-4px 0 18px;font-family:'Plex Mono',monospace;
   font-size:12px;color:var(--ink-2);letter-spacing:.02em}
 .memehow b{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;
   border-radius:50%;background:var(--accent-chip);color:var(--accent);font-size:11px;margin-right:6px}
@@ -544,7 +544,10 @@ footer .cols{display:flex;flex-wrap:wrap;gap:10px 34px}
 .mbtn.x{color:var(--accent)}
 .mbtn.busy{opacity:.5;pointer-events:none}
 .memeempty{font-family:'Plex Mono',monospace;font-size:12.5px;color:var(--muted);margin:14px 0 4px}
-.submitcard{border-color:rgba(168,224,90,.35)}
+.submitcard{border-color:rgba(168,224,90,.6);box-shadow:0 0 22px rgba(168,224,90,.16);
+  background:linear-gradient(180deg,rgba(168,224,90,.10),var(--surface) 70%)}
+.submitcard h2{font-size:14px}
+.submitcard .dropzone{min-height:190px}
 .submitrow{display:flex;align-items:center;gap:14px 18px;flex-wrap:wrap}
 .submitfine{font-size:12px;color:var(--muted);max-width:52ch}
 .submitalt{font-family:'Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}

@@ -12,7 +12,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="style.css?v=19">
 </head>
 <body data-light>
 
@@ -38,7 +38,29 @@
   <div class="pagehead">
     <h1>The Meme <span class="dim">Pond</span></h1>
     <p class="tagline">FREE TO USE · DOWNLOAD · COPY · SHARE · TOSS YOUR OWN IN</p>
-    <p class="scanpromo">Made by the community, for the community. Everything here is free to post and remix. <a href="#submit">Toss yours in ↓</a></p>
+    <p class="scanpromo">Made by the community, for the community. Everything here is free to post and remix.</p>
+  </div>
+
+  <div class="card submitcard" id="submit">
+    <h2>Toss a meme in the pond</h2>
+    <p class="cardsub">Pick an image, hit send, done. No account, nothing to sign up for.
+      Every meme goes live for the whole community to grab once the pondkeeper waves it through
+      (FRONG stuff only, nothing NSFW or hateful, yours to share).</p>
+    <div class="dropzone" id="drop" tabindex="0" role="button" aria-label="Pick or drop an image">
+      <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+      <img id="uppreview" class="uppreview" alt="" hidden>
+      <span class="dropcopy">🐸 click to pick your meme — or drop / paste it here</span>
+      <span class="dropfine mono">PNG · JPG · GIF · WebP · up to 4 MB</span>
+    </div>
+    <div class="upform" id="upform" hidden>
+      <input id="uptitle" class="memesearch mono" type="text" maxlength="80" placeholder="title (optional)" autocomplete="off">
+      <input id="upcredit" class="memesearch mono" type="text" maxlength="40" placeholder="your handle for credit (optional)" autocomplete="off">
+      <div class="uprow">
+        <button class="btn" id="upsend" disabled>🪰 toss it in</button>
+        <button class="mbtn" id="upcancel">cancel</button>
+      </div>
+    </div>
+    <p class="upstatus mono" id="upstatus"></p>
   </div>
 
   <div class="memehow" aria-label="How to use">
@@ -60,27 +82,6 @@
     </div>
     <div class="memegrid" id="memegrid" aria-live="polite"></div>
     <p class="memeempty" id="memeempty" hidden></p>
-  </div>
-
-  <div class="card submitcard" id="submit">
-    <h2>Got a frog? Toss it in the pond</h2>
-    <p class="cardsub">Pick an image from your phone or computer and hit send — no account, nothing to sign up for.
-      The pondkeeper looks at every submission before it goes live (FRONG-related, not NSFW, not hateful, yours to share).</p>
-    <div class="dropzone" id="drop" tabindex="0" role="button" aria-label="Pick or drop an image">
-      <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
-      <img id="uppreview" class="uppreview" alt="" hidden>
-      <span class="dropcopy">📸 tap to pick a frog — or drop / paste an image here</span>
-      <span class="dropfine mono">PNG · JPG · GIF · WebP · up to 4 MB</span>
-    </div>
-    <div class="upform" id="upform" hidden>
-      <input id="uptitle" class="memesearch mono" type="text" maxlength="80" placeholder="title (optional)" autocomplete="off">
-      <input id="upcredit" class="memesearch mono" type="text" maxlength="40" placeholder="your handle for credit (optional)" autocomplete="off">
-      <div class="uprow">
-        <button class="btn" id="upsend" disabled>🪰 toss it in</button>
-        <button class="mbtn" id="upcancel">cancel</button>
-      </div>
-    </div>
-    <p class="upstatus mono" id="upstatus"></p>
   </div>
 
   <footer>
