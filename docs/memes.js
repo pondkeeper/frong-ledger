@@ -6,7 +6,7 @@
 'use strict';
 
 const API = 'https://frong-meme-pond.pondkeeper.workers.dev'; // drop-box worker (worker/) — empty = submissions closed
-const SITE_URL = 'https://pondkeeper.github.io/frong-ledger/memes.html';
+const SITE_URL = 'https://frong.io/memes';
 const POST_TEXT = '$FRONG 🐸';                 // prefilled text for the X composer
 const MAX_MB = 4;
 

@@ -302,12 +302,23 @@ try {
     await page.goto(`http://localhost:${PORT}/${file}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
     ok(`${file}: no page errors`, errors.length === 0, errors.join(' | ').slice(0, 200));
-    ok(`${file}: the nav has a POOL tab linking to pool.html`, (await page.$eval('.tabbar a[href="pool.html"]', (a) => a.textContent.trim())) === '🎰 The Pool ↗');
+    ok(`${file}: the nav has a POOL tab linking to pool.html`, (await page.$eval('.tabbar a[href="/pool"]', (a) => a.textContent.trim())) === '🎰 The Pool ↗');
+    const htmlHrefs = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')).filter((h) => /\.html/.test(h) && !/^https?:/.test(h)));
+    ok(`${file}: no internal link carries .html`, htmlHrefs.length === 0, htmlHrefs.join(' '));
     if (file === 'index.html') {
       const jp = await page.$eval('#herojackpot', (a) => ({ hidden: a.hidden, text: a.innerText.replace(/\s+/g, ' '), href: a.getAttribute('href') }));
-      ok('index hero: the live jackpot line reads the open pot from the chain', !jp.hidden && /Today's jackpot: 294k FRONG · chip in before the 4 PM NY bell/i.test(jp.text) && jp.href === 'pool.html', jp.text);
+      ok('index hero: the live jackpot line reads the open pot from the chain', !jp.hidden && /Today's jackpot: 294k FRONG · chip in before the 4 PM NY bell/i.test(jp.text) && jp.href === '/pool', jp.text);
       await page.screenshot({ path: shot('index-hero.png'), clip: { x: 0, y: 0, width: 1280, height: 900 } });
     }
+    await page.close();
+  }
+  // ---------------------------------------------------------------- an old .html link: the address bar is cleaned, the ref survives
+  {
+    const { page } = await open('clean', 1000, 700, fx, {}, { query: '?ref=abc' });
+    const loc = await page.evaluate(() => ({ p: location.pathname, s: location.search }));
+    ok('arriving at /pool.html?ref=abc leaves the address bar at /pool?ref=abc (no reload)', loc.p === '/pool' && loc.s === '?ref=abc', JSON.stringify(loc));
+    const htmlHrefs = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')).filter((h) => /\.html/.test(h) && !/^https?:/.test(h)));
+    ok('pool page: no internal link carries .html', htmlHrefs.length === 0, htmlHrefs.join(' '));
     await page.close();
   }
   // ---------------------------------------------------------------- the inert state: no pool in config

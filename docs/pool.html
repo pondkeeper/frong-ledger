@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>(function(){var p=location.pathname;if(/\.html$/.test(p)){history.replaceState(null,"",p.replace(/\.html$/,"").replace(/\/index$/,"/")+location.search+location.hash)}})();</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>The Frong Pool</title>
 <meta name="description" content="One FRONG jackpot a day. Chip in before the 4 PM New York bell: one player takes the jackpot, one gets their money back. The number is drand's public beacon, checked by the contract itself.">
@@ -12,14 +13,14 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=21">
 <link rel="stylesheet" href="pool.css?v=1">
 </head>
 <body data-light>
 
 <div class="sitehead">
   <div class="inner">
-    <span class="wordmark">🐸 <a href="index.html" style="color:inherit">Frong Ledger</a></span>
+    <span class="wordmark">🐸 <a href="/" style="color:inherit">Frong Ledger</a></span>
     <span class="livechip"><span class="livedot" id="livedot"></span><span id="liveprice">—</span></span>
     <span id="tipline" hidden><button id="tipbtn" class="tipbtn">🪰 <span
       class="tip-verbose">toss a fly to the pondkeeper</span><span class="tip-brief">tip the frog</span></button></span>
@@ -28,11 +29,11 @@
 
 <div class="wrap">
   <nav class="tabbar pool-tabbar" aria-label="Views">
-    <a class="tabbtn" href="index.html#signal">📡 The Signal</a>
-    <a class="tabbtn" href="index.html#scanner">🔍 Scan your wallet</a>
-    <a class="tabbtn" href="index.html#flywheel">🔄 Flywheel</a>
-    <a class="tablink" href="ledger.html">📒 The Ledger ↗</a>
-    <a class="tablink" href="memes.html">🐸 Meme pond ↗</a>
+    <a class="tabbtn" href="/#signal">📡 The Signal</a>
+    <a class="tabbtn" href="/#scanner">🔍 Scan your wallet</a>
+    <a class="tabbtn" href="/#flywheel">🔄 Flywheel</a>
+    <a class="tablink" href="/ledger">📒 The Ledger ↗</a>
+    <a class="tablink" href="/memes">🐸 Meme pond ↗</a>
     <span class="tablink on" aria-current="page">🎰 The Pool</span>
   </nav>
 
@@ -46,7 +47,7 @@
   <footer>
     <div class="cols">
       <span>The number is drand's public beacon, checked by the contract itself — nobody can pick or delay it.</span>
-      <span><a href="methodology.html#pool">How the pool works</a></span>
+      <span><a href="/methodology#pool">How the pool works</a></span>
       <span id="pool-tg" hidden><a href="#" rel="noopener" target="_blank">the FRONG chat ↗</a></span>
       <span><a href="https://github.com/pondkeeper/frong-ledger" rel="noopener">open source ↗</a></span>
     </div>
@@ -77,9 +78,9 @@
 
 <div class="op-toast mono" id="op-toast" role="status" aria-live="polite"></div>
 
-<script src="pool-config.js?v=1"></script>
-<script src="app.js?v=21"></script>
-<script src="pool.js?v=1"></script>
+<script src="pool-config.js?v=2"></script>
+<script src="app.js?v=22"></script>
+<script src="pool.js?v=2"></script>
 <script>window.__POOL && window.__POOL.page(document.getElementById("pool-host"));</script>
 </body>
 </html>

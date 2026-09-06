@@ -21,6 +21,6 @@ window.POOL_CFG = {
   copy: {
     connect: "CONNECT WALLET",
     post: "i'm in the frong pool: {jackpot} FRONG jackpot today. one takes it, one gets their money back. chip in before the 4 PM New York bell.\n\n{link}",
-    rulesHref: "methodology.html#pool",
+    rulesHref: "/methodology#pool",
   },
 };

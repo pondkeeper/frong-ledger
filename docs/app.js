@@ -600,7 +600,7 @@ function renderMovers() {
       <div class="mvrow">
         <span class="mvside ${pos ? 'b' : 's'}">${pos ? '▲' : '▼'}</span>
         <div class="mvwho">
-          <a class="mvaddr" href="ledger.html" title="open the ledger">${short(m.addr)}</a>
+          <a class="mvaddr" href="/ledger" title="open the ledger">${short(m.addr)}</a>
           <span class="mvtags">${r ? `whale #${r.rank}` : (m.in_top === false ? 'sold out of top 50' : 'whale')}${m.cohort === 'day_one' || m.cohort === 'sniper' ? ' · day one og' : ''}
             · <a href="${EXPLORER}/address/${hx(m.addr)}" target="_blank" rel="noopener">explorer ↗</a></span>
         </div>

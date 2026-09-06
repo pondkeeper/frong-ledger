@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>(function(){var p=location.pathname;if(/\.html$/.test(p)){history.replaceState(null,"",p.replace(/\.html$/,"").replace(/\/index$/,"/")+location.search+location.hash)}})();</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Frong Ledger</title>
 <meta name="description" content="Live answer to one question: are FRONG whales buying or selling right now? Whale flow vs price, the top-50 ledger with verified cost basis, diamond hands, any-wallet scanner.">
@@ -12,7 +13,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -38,13 +39,13 @@
   <div class="hero-overlay">
     <h1>Frong <span class="dim">Ledger</span></h1>
     <p class="tagline">THE CAMERA POINTED AT THE 50 BIGGEST FRONG WALLETS
-      <a class="method" href="methodology.html">HOW →</a></p>
+      <a class="method" href="/methodology">HOW →</a></p>
     <div class="verdict" id="verdict" aria-live="polite"></div>
     <div class="herobtns">
       <button class="btn heroscan-cta" data-tab="scanner" data-scroll="lookup">
         🔍 Scan your wallet — PnL in 5 seconds</button>
-      <a class="btn heroscan-cta hero-alt" href="memes.html">🖼 Meme pond — grab &amp; toss frogs</a>
-      <a class="btn heroscan-cta hero-alt heropool" id="herojackpot" href="pool.html" hidden>🎰 Today's jackpot: <b data-jp>—</b> · chip in before the 4 PM NY bell</a>
+      <a class="btn heroscan-cta hero-alt" href="/memes">🖼 Meme pond — grab &amp; toss frogs</a>
+      <a class="btn heroscan-cta hero-alt heropool" id="herojackpot" href="/pool" hidden>🎰 Today's jackpot: <b data-jp>—</b> · chip in before the 4 PM NY bell</a>
     </div>
     <div class="hudstats" id="stats" aria-label="Market stats"></div>
   </div>
@@ -69,7 +70,7 @@
       <span class="bm-cta">how the burn works →</span></span>
   </button>
 
-  <a class="pondbanner" href="memes.html">
+  <a class="pondbanner" href="/memes">
     <span class="pb-frog" aria-hidden="true">🐸</span>
     <span class="pb-text"><b>The Meme Pond is open.</b> Community FRONG memes — grab any for your posts, toss in your own. No account needed.</span>
     <span class="pb-cta">enter the pond →</span>
@@ -80,9 +81,9 @@
     <button role="tab" data-tab="scanner" aria-selected="false">🔍 Scan your wallet</button>
     <button role="tab" data-tab="diamond" aria-selected="false">💎 Diamond hands</button>
     <button role="tab" data-tab="flywheel" aria-selected="false">🔄 Flywheel · 🔥 Burn</button>
-    <a class="tablink" href="ledger.html">📒 The Ledger · all 50 whales ↗</a>
-    <a class="tablink" href="memes.html">🐸 Meme pond ↗</a>
-    <a class="tablink" href="pool.html">🎰 The Pool ↗</a>
+    <a class="tablink" href="/ledger">📒 The Ledger · all 50 whales ↗</a>
+    <a class="tablink" href="/memes">🐸 Meme pond ↗</a>
+    <a class="tablink" href="/pool">🎰 The Pool ↗</a>
   </nav>
 
   <section class="tabpane active" id="pane-signal">
@@ -115,7 +116,7 @@
         <h2>Biggest whale moves · last 24h</h2>
         <p class="cardsub">Who bought and who dumped in the last day.</p>
         <div id="movers"></div>
-        <a class="btn ledgercta" href="ledger.html">Open the ledger — all 50 whales →</a>
+        <a class="btn ledgercta" href="/ledger">Open the ledger — all 50 whales →</a>
       </div>
       <div class="card apexcard" id="apexspot">
         <h2>Apex specimen</h2>
@@ -196,7 +197,7 @@
         <p class="bm-note">That's why the bar is measured in FRONG and not in dollars —
           <strong>if the price falls, 500,000 FRONG gets cheaper, so the bar fills faster and burns
           come sooner</strong>. The pot is read live from the three contracts the money passes
-          through; see the <a href="methodology.html">method</a>.</p>
+          through; see the <a href="/methodology">method</a>.</p>
       </div>
 
       <div class="fw-tiles" id="burntiles"></div>
@@ -210,7 +211,7 @@
       <span>Data: <a href="https://robinhoodchain.blockscout.com" rel="noopener">Blockscout</a> ·
         <a href="https://www.geckoterminal.com" rel="noopener">GeckoTerminal</a> ·
         <a href="https://dexscreener.com" rel="noopener">DexScreener</a></span>
-      <span><a href="methodology.html">Methodology &amp; limitations</a></span>
+      <span><a href="/methodology">Methodology &amp; limitations</a></span>
       <span><a href="assets/frong-original.mp4">original teaser — full 24s (archived) ↗</a></span>
       <span><a href="https://github.com/pondkeeper/frong-ledger" rel="noopener">open source ↗</a></span>
       <span id="gen"></span>
@@ -240,7 +241,7 @@
     audit it like everything else here.</p>
 </dialog>
 
-<script src="pool-config.js?v=1"></script>
-<script src="app.js?v=21"></script>
+<script src="pool-config.js?v=2"></script>
+<script src="app.js?v=22"></script>
 </body>
 </html>

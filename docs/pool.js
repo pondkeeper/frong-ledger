@@ -639,7 +639,7 @@
     const rules = `<div class="cab rules"><div class="lab">HOUSE RULES</div>
       <p><b>1.</b> Chip in ${SYM} before the ${bellNY} New York bell${T.minDeposit > 0n ? ` (at least <b>${fmtExact(T.minDeposit)}</b> a time)` : ""}. <b>${T.divBps / 100}%</b> of every chip-in is paid out on the spot to everyone already in that day, pro-rata; <b>${T.refBps / 100}%</b> goes to whoever sent you.</p>
       <p><b>2.</b> ${Math.round(S.delay / 60)} minutes after the bell, drand's public beacon picks two players: one takes the jackpot, one gets their money back${last ? "" : ""}. Your chance is what you chipped in${BOOST ? `, up to <b>${cap / 10000}×</b> with a boost` : ""}. A chip-in is final.</p>
-      <p><b>3.</b> The contract checks the beacon itself; nobody can pick or delay it. Every past pool links its beacon above. Fine print: <a href="${esc(COPY.rulesHref || "methodology.html#pool")}">how the pool works</a>.</p></div>`;
+      <p><b>3.</b> The contract checks the beacon itself; nobody can pick or delay it. Every past pool links its beacon above. Fine print: <a href="${esc(COPY.rulesHref || "/methodology#pool")}">how the pool works</a>.</p></div>`;
 
     // the bell panel (a missed draw, rare) goes after the desk: on a phone it would push CHIP IN below the first screen
     host.innerHTML = tickerHtml + board + `<div class="cols"><div>${desk}${ref}</div><div>${lead}</div></div>` + bell + hist + rules;
