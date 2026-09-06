@@ -108,6 +108,11 @@
 
 /* the phone: the jackpot, the countdown and CHIP IN on the first screen */
 @media (max-width:640px){
+  .board.in .one{display:none}            /* a player who is in knows the game; the board's YOU TODAY row says the rest */
+  .desk .hi.inline{display:none}
+  .desk .presets{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  .desk .presets::-webkit-scrollbar{display:none}
+  .desk .presets .chip{height:30px;flex:none}
   .pool-tabbar{padding:4px;margin-bottom:12px}
   .pool-tabbar .tabbtn{display:none}
   .pool-head{margin:0 0 12px}
@@ -122,6 +127,9 @@
 }
 /* short desktop windows: a compact head so the desk starts inside the first screen */
 @media (min-width:641px) and (max-height:720px){
+  .desk .hi.inline{display:none}
+  .desk{gap:8px}
+  .desk .presets .chip{height:30px}
   .pool-tabbar{margin-bottom:10px;padding:4px}
   .pool-tabbar [class]{padding:7px 12px}
   .pool-head{margin:0 0 8px}

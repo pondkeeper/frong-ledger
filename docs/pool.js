@@ -189,7 +189,7 @@
   }
   async function send(to, data, from, gasLimit) {
     const p = provider();
-    const tx = { from, to, data };
+    const tx = { from, to, data, chainId: CFG.chainHex }; // a wallet moved to another chain refuses instead of signing a no-op there
     if (gasLimit) tx.gas = "0x" + gasLimit.toString(16);
     const fees = await suggestedFees();
     if (fees) Object.assign(tx, fees);
@@ -349,7 +349,11 @@
     catch (e) {
       if (e && e.code === 4902) await p.request({ method: "wallet_addEthereumChain", params: [{ chainId: CFG.chainHex, chainName: CFG.chainName, rpcUrls: [RPCS[0]], nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, blockExplorerUrls: CFG.explorer ? [CFG.explorer] : undefined }] });
     }
-    if (p.on) p.on("accountsChanged", (a) => { S.account = a[0] || null; S.me = null; refresh(); });
+    if (p.on && !p.__poolListening) { // once per provider: a re-pick must not stack listeners
+      p.__poolListening = true;
+      p.on("accountsChanged", (a) => { S.account = a[0] || null; S.me = null; refresh(); });
+      p.on("chainChanged", () => refresh());
+    }
     await refresh();
   }
 
@@ -383,6 +387,9 @@
     if (/TooEarly|0x085de625/.test(m)) return "too early";
     if (/BadBeacon|0x50264bfe|bad beacon/i.test(m)) return "that is not the round's beacon";
     if (/TransferFailed|0x90b8ec18/.test(m)) return "the token transfer failed";
+    // the token's own reverts (solady): InsufficientAllowance / InsufficientBalance — not a gas problem
+    if (/InsufficientAllowance|0x13be252b|insufficient allowance|exceeds allowance/i.test(m)) return `the pool is not allowed to take that much ${SYM} yet — try again in a moment`;
+    if (/InsufficientBalance|0xf4d678b8|insufficient balance|exceeds balance/i.test(m)) return "that is more than you have";
     if (/insufficient/i.test(m)) return "not enough ETH for gas";
     return m.length > 160 ? m.slice(0, 160) + "…" : m || "something went wrong";
   }
@@ -544,7 +551,7 @@
 
     // ---- the winners tape: earns its place once there is history to roll
     const tickerItems = [];
-    if (r) tickerItems.push(`<span class="up">TODAY'S JACKPOT ${fmt(r.pot)} ${SYM}</span> · closes ${bellNY} NY`);
+    if (r && r.pot > 0n) tickerItems.push(`<span class="up">TODAY'S JACKPOT ${fmt(r.pot)} ${SYM}</span> · closes ${bellNY} NY`);
     for (const h of S.history.filter((x) => x.state === 2 && x.playerCount > 0).slice(0, 6)) {
       tickerItems.push(h.jackpotWinner !== ZERO ? `${nyTime(h.closesAt, true)} · jackpot <span class="up">${fmt(h.jackpotPaid)}</span> → ${short(h.jackpotWinner)}` : `${nyTime(h.closesAt, true)} · money back ${fmt(h.refundPaid)} → ${short(h.refundWinner)}`);
     }
@@ -552,13 +559,13 @@
     const half = tape.repeat(Math.max(2, Math.ceil(2400 / Math.max(80, tape.replace(/<[^>]+>/g, "").length * 8))));
     const tickerHtml = tickerItems.length > 1 ? `<div class="op-ticker"><div class="tape">${half}${half}</div></div>` : "";
 
-    const board = `<div class="cab board"><div class="scr">${banner}<div class="hero">
+    const board = `<div class="cab board${me && me.deposited > 0n ? " in" : ""}"><div class="scr">${banner}<div class="hero">
       <div class="lab">${r ? "TODAY'S JACKPOT" : "THE JACKPOT"}</div>
-      <div class="pot${left > 0 && left <= 600 ? " hot2" : left > 0 && left <= 3600 ? " hot1" : ""}" data-pot="${r ? r.pot.toString() : "0"}"><span class="num">${r ? fmt(S.potShown && S.potShown < r.pot ? S.potShown : r.pot) : "—"}</span>${r ? `<span class="unit">${SYM}</span>` : ""}</div>
+      <div class="pot${left > 0 && left <= 600 ? " hot2" : left > 0 && left <= 3600 ? " hot1" : ""}" data-pot="${r ? r.pot.toString() : "0"}"><span class="num">${r ? fmt(S.potShown && S.potShown < r.pot ? S.potShown : r.pot) : "—"}</span>${r ? ` <span class="unit">${SYM}</span>` : ""}</div>
       <div class="one">chip in ${SYM} before the ${bellNY} <span class="long">New York</span><span class="short">NY</span> bell · one takes the jackpot, one gets their money back<span class="long"> · ${T.divBps / 100}% of every chip-in is paid out to everyone already in</span></div>
-      <div class="fine">${r ? [`${r.playerCount} player${r.playerCount === 1 ? "" : "s"}`, `${fmt(r.deposits)}&nbsp;in`, r.seed > 0n ? `${fmt(r.seed)} seeded` : "", usdLine(r.pot)].filter(Boolean).join(" · ") : (S.loaded ? "nobody has chipped in yet today — the first one opens the pool" : "reading the chain…")}</div></div>
+      <div class="fine">${r ? (r.playerCount === 0 && r.pot === 0n ? "the pool is open and nobody is in yet — the first chip-in today starts the jackpot" : [`${r.playerCount} player${r.playerCount === 1 ? "" : "s"}`, `${fmt(r.deposits)}&nbsp;in`, r.seed > 0n ? `${fmt(r.seed)} seeded` : "", usdLine(r.pot)].filter(Boolean).join(" · ")) : (S.loaded ? "nobody has chipped in yet today — the first one opens the pool" : "reading the chain…")}</div></div>
       <div class="row">
-        <div><div class="lab">${left > 0 ? "CLOSES IN" : "CLOSED"}</div><div class="cd${left > 0 && left <= HOT_WINDOW ? " hot" : ""}">${countdown(left)}</div><div class="fine">${S.closesAt ? `<span class="long">${nyTime(S.closesAt, true)} NY${localTime(S.closesAt)} · drawn 5 min after the bell</span><span class="short">${nyTime(S.closesAt)} NY${localTime(S.closesAt, true)} · drawn +5 min</span>` : ""}</div></div>
+        <div><div class="lab">${left > 0 ? "CLOSES IN" : "CLOSED"}</div><div class="cd${left > 0 && left <= HOT_WINDOW ? " hot" : ""}">${countdown(left)}</div><div class="fine">${S.closesAt ? `<span class="long">${nyTime(S.closesAt, true)} NY${localTime(S.closesAt)} · drawn ${Math.round(S.delay / 60)} min after the bell</span><span class="short">${nyTime(S.closesAt)} NY${localTime(S.closesAt, true)} · drawn +${Math.round(S.delay / 60)} min</span>` : ""}</div></div>
         ${me && me.deposited > 0n ? `<div><div class="lab">YOU TODAY</div><div class="hi">${fmt(me.deposited)} ${SYM}</div><div class="fine">${BOOST ? `${me.brokers} counted · ${multX(me.brokers)}` : (usdLine(me.deposited) || "&nbsp;")}</div></div>
         <div><div class="lab">YOUR CHANCE AT THE JACKPOT</div><div class="hi">${odds ? "1 in " + odds : "—"}</div><div class="fine">${me.divEarned > 0n ? "earned " + fmt(me.divEarned) + " in dividends today" : "&nbsp;"}</div></div>` : ""}
       </div></div></div>`;
@@ -586,7 +593,7 @@
     } else {
       const presets = (CFG.presets || []).map((n) => `<button class="chip" data-act="preset" data-n="${n}" type="button">${n >= 1e6 ? (n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 }) + "M" : n >= 1000 ? (n / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "k" : n.toLocaleString("en-US")}</button>`).join("");
       deskBody = `
-      ${me && me.deposited > 0n ? `<div class="hi">you're in with ${fmt(me.deposited)} · ${odds ? "1 in " + odds : "—"}</div>` : ""}
+      ${me && me.deposited > 0n ? `<div class="hi inline">you're in with ${fmt(me.deposited)} · ${odds ? "1 in " + odds : "—"}</div>` : ""}
       ${poor ? `<div class="need">you need at least ${fmt(T.minDeposit)} ${SYM} to chip in${buyHref ? ` · <a href="${esc(buyHref)}" target="_blank" rel="noopener">get ${SYM} →</a>` : ""}</div>` : ""}
       <div class="amt"><input type="text" inputmode="decimal" id="op-amt" placeholder="${fmtExact(T.minDeposit)} min" autocomplete="off"></div>
       <div class="presets"><button class="chip" data-act="min" type="button">MIN</button>${presets}<button class="chip" data-act="max" type="button">MAX</button></div>
@@ -631,7 +638,7 @@
 
     const rules = `<div class="cab rules"><div class="lab">HOUSE RULES</div>
       <p><b>1.</b> Chip in ${SYM} before the ${bellNY} New York bell${T.minDeposit > 0n ? ` (at least <b>${fmtExact(T.minDeposit)}</b> a time)` : ""}. <b>${T.divBps / 100}%</b> of every chip-in is paid out on the spot to everyone already in that day, pro-rata; <b>${T.refBps / 100}%</b> goes to whoever sent you.</p>
-      <p><b>2.</b> Five minutes after the bell, drand's public beacon picks two players: one takes the jackpot, one gets their money back${last ? "" : ""}. Your chance is what you chipped in${BOOST ? `, up to <b>${cap / 10000}×</b> with a boost` : ""}. A chip-in is final.</p>
+      <p><b>2.</b> ${Math.round(S.delay / 60)} minutes after the bell, drand's public beacon picks two players: one takes the jackpot, one gets their money back${last ? "" : ""}. Your chance is what you chipped in${BOOST ? `, up to <b>${cap / 10000}×</b> with a boost` : ""}. A chip-in is final.</p>
       <p><b>3.</b> The contract checks the beacon itself; nobody can pick or delay it. Every past pool links its beacon above. Fine print: <a href="${esc(COPY.rulesHref || "methodology.html#pool")}">how the pool works</a>.</p></div>`;
 
     // the bell panel (a missed draw, rare) goes after the desk: on a phone it would push CHIP IN below the first screen

@@ -830,7 +830,7 @@ async function pollJackpot() {
       const dec = BigInt(cfg.decimals == null ? 18 : cfg.decimals);
       const n = Number(pot / 10n ** (dec > 3n ? dec - 3n : 0n)) / (dec > 3n ? 1000 : Number(10n ** dec));
       const t = (x, d) => x.toLocaleString('en-US', { maximumFractionDigits: d });
-      line = (n >= 1e9 ? t(n / 1e9, 2) + 'B' : n >= 1e6 ? t(n / 1e6, 2) + 'M' : n >= 1e4 ? t(n / 1e3, 1) + 'k' : t(n, 0)) + ' ' + (cfg.symbol || '');
+      line = (n >= 1e12 ? t(n / 1e12, 2) + 'T' : n >= 1e9 ? t(n / 1e9, 2) + 'B' : n >= 1e6 ? t(n / 1e6, 2) + 'M' : n >= 1e4 ? t(n / 1e3, 1) + 'k' : t(n, 0)) + ' ' + (cfg.symbol || '');
     }
     el.querySelector('[data-jp]').textContent = line;
   } catch (e) { /* the link stays, the number waits for the next poll */ }
