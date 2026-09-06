@@ -382,20 +382,40 @@
     await refresh();
   }
 
+  /// the public rpc is load-balanced over replicas that lag each other by a few blocks: a read right after the
+  /// receipt can hit one that has not seen the block. Wait until OUR rpc reports the receipt's block (cap 10 s).
+  async function waitForBlock(n) {
+    const target = Number(n);
+    if (!target) return;
+    for (let i = 0; i < 20; i++) {
+      try { const j = await rpcPost({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }); if (Number(BigInt(j.result)) >= target) return; } catch (e) {}
+      await sleep(500);
+    }
+  }
   async function tx(label, fn, after) {
     if (S.busy) return;
     S.busy = true;
+    const countBefore = S.count, claimBefore = S.claimable, codeBefore = S.code;
+    let landed = false;
     try {
       toast(label + "…");
       const hash = await fn();
       toast("sent, waiting for the block…");
-      await waitForTx(hash);
+      const rc = await waitForTx(hash);
+      landed = true;
+      await waitForBlock(rc && rc.blockNumber);
       toast(label + ": done", true);
       if (after) await after();
     } catch (e) {
       toast(humanError(e), false);
     } finally { S.busy = false; }
     await refresh();
+    if (landed) {
+      // a burst of re-reads covers a replica still behind, or a wallet-side receipt our rpc has not seen
+      const changed = () => S.count !== countBefore || S.claimable !== claimBefore || S.code !== codeBefore;
+      if (!changed()) toast("landed — the board catches up in a moment", true);
+      for (const ms of [2000, 5000, 10000]) setTimeout(() => { if (!S.busy) refresh(); }, ms);
+    }
   }
   function humanError(e) {
     const m = String((e && (e.shortMessage || e.message)) || e || "");

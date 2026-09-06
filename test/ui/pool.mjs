@@ -69,7 +69,7 @@ function fixture(dec, sym) {
       case '0x994ec7c7': return '0x' + W(0); // referralOwed
       case '0x2cfc2716': return '0x' + Buffer.from('mockname').toString('hex').padEnd(64, '0'); // codeOf: a name already set
       case '0x2cf003c2': return '0x' + W(0); // referrer
-      case '0xcaeacdb9': return '0x' + playerView({ dep: 0n, earned: 0n }); // playerView: not in yet
+      case '0xcaeacdb9': return '0x' + (this.landed ? playerView({ dep: 25_000n * U, earned: 0n }) : playerView({ dep: 0n, earned: 0n })); // playerView: in with 25k once the deposit landed
       case '0x8820a363': return '0x' + arr([2]); // roundsOf
       case '0x11ad2f34': { // codeOwner(bytes32): "alice" is registered, anything else is not
         const code = Buffer.from(data.slice(10, 74), 'hex').toString('utf8').replace(/\0+$/, '');
@@ -82,7 +82,7 @@ function fixture(dec, sym) {
       case '0xf0c0f269': return '0x' + arr([1]); // dueForDraw
       case '0xf36ea453': return '0x' + arr([3, 2, 1]);
       case '0xdb5b4737': return '0x' + (ROUNDS[Number(BigInt('0x' + data.slice(10, 74)))] || W(0).repeat(20));
-      case '0xa537f3c9': return '0x' + W(5);
+      case '0xa537f3c9': return '0x' + W(this.landed ? 6 : 5);
       case '0x1f5053a1': { // players(): (address[], PlayerView[])
         const addrs = W(P.length) + P.map((p) => WA(p.a)).join('');
         const views = W(P.length) + P.map(playerView).join('');
@@ -148,8 +148,8 @@ async function open(label, width, height, fx, cfgPatch, opts = {}) {
         try { return { jsonrpc: '2.0', id: m.id, result: fx.answer(m.params[0].to, m.params[0].data) }; }
         catch (e) { unknown.push(e.message); return { jsonrpc: '2.0', id: m.id, error: { code: -32000, message: e.message } }; }
       }
-      if (m.method === 'eth_blockNumber') return { jsonrpc: '2.0', id: m.id, result: '0x1' };
-      if (m.method === 'eth_getTransactionReceipt') return { jsonrpc: '2.0', id: m.id, result: { status: '0x1', blockNumber: '0x1', transactionHash: m.params[0], gasUsed: '0x1', logs: [] } };
+      if (m.method === 'eth_blockNumber') { fx.lag = (fx.lag || 0) + 1; return { jsonrpc: '2.0', id: m.id, result: fx.landed && fx.lag <= 2 ? '0x61' : '0x64' }; } // 97 twice, then 100: a replica behind the receipt
+      if (m.method === 'eth_getTransactionReceipt') { fx.landed = true; fx.lag = 0; return { jsonrpc: '2.0', id: m.id, result: { status: '0x1', blockNumber: '0x64', transactionHash: m.params[0], gasUsed: '0x1', logs: [] } }; }
       if (m.method === 'eth_gasPrice') return { jsonrpc: '2.0', id: m.id, result: '0x5f5e100' };
       if (m.method === 'eth_estimateGas') return { jsonrpc: '2.0', id: m.id, result: '0x6a9c0' }; // 436,672: a first-of-the-day deposit
       if (m.method === 'eth_chainId') return { jsonrpc: '2.0', id: m.id, result: '0x1237' };
@@ -236,6 +236,8 @@ try {
     const want = '0xb927dab6' + W(25_000n * 10n ** 18n) + W(96) + Buffer.from('alice').toString('hex').padEnd(64, '0') + W(0);
     ok('…and goes straight on to deposit(25,000, [], "alice") with the exact calldata', sentTx.length >= 2 && sentTx[1].to.toLowerCase() === POOL.toLowerCase() && sentTx[1].data === want, sentTx[1] ? sentTx[1].data.slice(0, 74) : '(no second tx)');
     ok('the deposit gas is the estimate +25% (436,672 → 545,840), with a fee ceiling from the node price', sentTx.length >= 2 && parseInt(sentTx[1].gas, 16) === 545840 && sentTx[1].maxFeePerGas === '0x' + ((100000000n * 5n) / 4n).toString(16), sentTx[1] ? `gas ${parseInt(sentTx[1].gas, 16)} maxFee ${sentTx[1].maxFeePerGas}` : '');
+    const t3b = await text();
+    ok('the deposit shows on the desk right after the receipt — the page waited for OUR rpc to reach the receipt block (97, 97, then 100), no idle poll needed', /you're in with 25k/.test(t3b) && /YOU TODAY 25k FRONG/.test(t3b), (t3b.match(/you're in[^·]*/) || ['(not shown)'])[0] + ` · blockNumber polls ${fx.lag}`);
     await page.close();
   }
   // ---------------------------------------------------------------- short desk 1280×700 / 1280×640
