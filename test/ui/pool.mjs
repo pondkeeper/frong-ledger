@@ -334,9 +334,16 @@ try {
     const htmlHrefs = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')).filter((h) => /\.html/.test(h) && !/^https?:/.test(h)));
     ok(`${file}: no internal link carries .html`, htmlHrefs.length === 0, htmlHrefs.join(' '));
     if (file === 'index.html') {
-      const jp = await page.$eval('#herojackpot', (a) => ({ hidden: a.hidden, text: a.innerText.replace(/\s+/g, ' '), href: a.getAttribute('href') }));
-      ok('index hero: the live jackpot line reads the open pot from the chain', !jp.hidden && /Today's pond: 294k FRONG · toss a frong in before the 4 PM NY croak/i.test(jp.text) && jp.href === '/pond', jp.text);
+      const jp = await page.$eval('#herojackpot', (a) => ({ hidden: a.hidden, text: a.innerText.replace(/\s+/g, ' '), href: a.getAttribute('href'), w: a.getBoundingClientRect().width, bottom: Math.round(a.getBoundingClientRect().bottom) }));
+      ok('index hero: the Pond is the one primary CTA, full width, with the live pot', !jp.hidden && /TODAY'S POND: 294k FRONG — TOSS A FRONG BEFORE THE 4 PM NY CROAK/i.test(jp.text) && jp.href === '/pond' && jp.w > 1000, jp.text + ` w${Math.round(jp.w)}`);
+      const primaries = await page.$$eval('.hero-overlay .btn:not(.hero-alt)', (bs) => bs.map((b) => b.getAttribute('href') || b.tagName));
+      ok('index hero: exactly one primary button, and it links /pond; the other two are secondaries', primaries.length === 1 && primaries[0] === '/pond' && (await page.$$('.herosec .btn.hero-alt')).length === 2, primaries.join(','));
+      ok('index hero: the Pond CTA is inside the first screen at 1280×900', jp.bottom <= 900, 'bottom ' + jp.bottom);
       await page.screenshot({ path: shot('index-hero.png'), clip: { x: 0, y: 0, width: 1280, height: 900 } });
+      await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(600);
+      const jpm = await page.$eval('#herojackpot', (a) => ({ w: Math.round(a.getBoundingClientRect().width), bottom: Math.round(a.getBoundingClientRect().bottom) }));
+      ok('index hero on a phone: the Pond CTA is full width and inside the first screen', jpm.w >= 340 && jpm.bottom <= 844, JSON.stringify(jpm));
+      await page.screenshot({ path: shot('index-hero-phone.png'), clip: { x: 0, y: 0, width: 390, height: 844 } });
     }
     await page.close();
   }
