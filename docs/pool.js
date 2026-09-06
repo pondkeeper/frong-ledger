@@ -373,6 +373,7 @@
     }
     S.wrongChain = false;
     S.account = accounts[0];
+    toast(`connected · ${short(S.account)}`, true); // replaces "opening your wallet…" the moment the wallet answers
     if (p.on && !p.__poolListening) { // once per provider: a re-pick must not stack listeners
       p.__poolListening = true;
       p.on("accountsChanged", (a) => { S.account = a[0] || null; S.me = null; refresh(); });
@@ -494,11 +495,11 @@
 
   // ---------------------------------------------------------------- render
   let host = null, timer = null, ticker = null;
-  function toast(msg, ok) {
+  function toast(msg, ok, ms) {
     const t = document.getElementById("op-toast");
     if (!t) return;
     t.textContent = msg; t.className = "op-toast mono on" + (ok === true ? " ok" : ok === false ? " bad" : "");
-    clearTimeout(toast._t); toast._t = setTimeout(() => { t.className = "op-toast mono"; }, ok === undefined ? 30000 : 6000);
+    clearTimeout(toast._t); toast._t = setTimeout(() => { t.className = "op-toast mono"; }, ms || (ok === undefined ? 30000 : 6000));
   }
   /// the jackpot rolls up to its new value rather than jumping
   function countUp(el) {
@@ -694,7 +695,7 @@
     if (!b) return;
     const act = b.dataset.act;
     const amt = () => document.getElementById("op-amt");
-    if (act === "connect") { toast("opening your wallet…"); return connect().catch((err) => toast(humanError(err), false)); }
+    if (act === "connect") { toast("opening your wallet…", undefined, 10000); return connect().catch((err) => toast(humanError(err), false)); }
     if (act === "min") { if (amt()) amt().value = fmtExact(terms().minDeposit); return; }
     if (act === "max") { if (amt()) amt().value = fmtExact(S.balance); return; }
     if (act === "preset") { if (amt()) amt().value = Number(b.dataset.n).toLocaleString("en-US"); return; }

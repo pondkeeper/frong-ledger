@@ -203,6 +203,8 @@ try {
     await page.waitForTimeout(2500);
     const t2 = await text();
     ok('connected: no unknown selector reached the rpc', unknown.length === 0, unknown.join(' | ').slice(0, 200));
+    const toastNow = await page.evaluate(() => document.getElementById('op-toast').textContent);
+    ok('connected: the "opening your wallet…" toast is replaced by "connected · 0x…"', /^connected · 0x0000…0ffe$/.test(toastNow), toastNow);
     ok('connected: the desk shows the balance and the wallet', /balance 100k FRONG · 0x0000…0ffe · sent by alice/.test(t2), (t2.match(/balance [^·]*· 0x[^ ]* · [^ ]* [^ ]*/) || [''])[0]);
     ok('connected: YOU took the jackpot in the banner, and a CLAIM for the dividends', /YOU took the jackpot: 160k FRONG/.test(t2) && /you have 4,200 in dividends to claim/.test(t2), (t2.match(/YOU took[^·]*/) || [''])[0]);
     ok('connected: a known link code needs no sender field', !(await page.$('#op-ref')));
