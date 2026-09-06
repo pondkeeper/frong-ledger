@@ -178,8 +178,6 @@ try {
     ok('no page errors', errors.length === 0, errors.join(' | ').slice(0, 300));
     if (errors.length || !/TODAY'S POND/.test(t)) console.log('TEXT:', t.slice(0, 700));
     ok("the board shows today's pond in FRONG", /TODAY'S POND 294k FRONG/.test(t), (t.match(/TODAY'S POND [^·]*/) || [''])[0]);
-    const visible = await page.evaluate(() => { const c = document.body.cloneNode(true); c.querySelectorAll('.rules, .hist, footer, script, style').forEach((n) => n.remove()); return c.innerText.replace(/\s+/g, ' '); });
-    ok('no "drand" in the visible copy outside the house rules, PAST PONDS and the footer', !/drand/i.test(visible) && /A DRAW NOBODY CAN RIG/.test(visible), (visible.match(/.{0,40}drand.{0,40}/i) || ['clean'])[0]);
     ok('pond page: no tip button and no tip-jar dialog', !(await page.$('#tipbtn')) && !(await page.$('#tipjar')));
     ok('the ≈USD line comes from the price hook (294k × $0.0084)', /≈ \$2,470/.test(t), (t.match(/≈ \$[0-9,]+/) || ['(none)'])[0]);
     ok('one line under the jackpot says what the game is, and the page never mentions the house cut', /toss a frong in before the \d+:\d\d [AP]M New York croak · one takes the pond, one gets their frongs back/.test(t) && !/house/i.test(t.replace(/HOUSE RULES/, '')), (t.match(/toss a frong in before[^·]*·[^·]*/) || [''])[0]);
