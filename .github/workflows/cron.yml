@@ -19,6 +19,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run pipeline
+        env:
+          # launch-window value while Blockscout 5xx's (2026-09-06): partial refreshes commit and the page
+          # labels the wallets kept from the previous run; raise back to 0.6 when a run refreshes >= 40/50 again
+          REFRESH_MIN_FRACTION: "0.2"
         run: python3 pipeline/refresh.py
       - name: Commit data
         run: |
