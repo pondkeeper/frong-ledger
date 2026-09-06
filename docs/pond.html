@@ -22,8 +22,6 @@
   <div class="inner">
     <span class="wordmark">🐸 <a href="/" style="color:inherit">Frong Ledger</a></span>
     <span class="livechip"><span class="livedot" id="livedot"></span><span id="liveprice">—</span></span>
-    <span id="tipline" hidden><button id="tipbtn" class="tipbtn">🪰 <span
-      class="tip-verbose">toss a fly to the pondkeeper</span><span class="tip-brief">tip the frog</span></button></span>
   </div>
 </div>
 
@@ -55,31 +53,11 @@
   </footer>
 </div>
 
-<dialog id="tipjar" class="tipjar" aria-labelledby="tipjar-title">
-  <div class="tj-head">
-    <span class="tj-frog" aria-hidden="true">🐸</span>
-    <h2 id="tipjar-title">Toss a fly in the pond</h2>
-    <button id="tipclose" class="tj-close" aria-label="Close">✕</button>
-  </div>
-  <p>The Frong Ledger is free and open-source. No ads, no paywall, no token to sell you —
-    and that never changes.</p>
-  <p>If the pond has been useful and you feel like it, you can toss the pondkeeper a fly.
-    Tips go toward keeping the tracker fed and running, and building new free tools for the
-    FRONG community. Completely optional: tipping unlocks nothing, and skipping it costs you
-    nothing. The frog loves you either way.</p>
-  <div class="tj-addr mono" id="tipaddr"></div>
-  <div class="tj-actions">
-    <button id="tipcopy" class="tj-copy">copy address</button>
-    <a id="tipexplore" href="#" rel="noopener" target="_blank">watch the tip jar on-chain ↗</a>
-  </div>
-  <p class="tj-fine">ETH or FRONG on Robinhood Chain. Every fly lands in a public wallet —
-    audit it like everything else here.</p>
-</dialog>
 
 <div class="op-toast mono" id="op-toast" role="status" aria-live="polite"></div>
 
 <script src="pool-config.js?v=3"></script>
-<script src="app.js?v=24"></script>
+<script src="app.js?v=25"></script>
 <script src="pool.js?v=8"></script>
 <script>window.__POOL && window.__POOL.page(document.getElementById("pool-host"));</script>
 </body>

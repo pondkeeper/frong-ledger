@@ -24,7 +24,7 @@ const FEE_CONTRACTS = [
 const BURN_SIZE = 500000;
 const BURN_LBL = BURN_SIZE.toLocaleString('en-US');
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const TIP_ADDR = '0xfab7eb30FF671e9Ff0551732771F4C6Ba27449d6'; // anon tip wallet — leave empty to hide the tip button
+const TIP_ADDR = ''; // the tip button was removed from every page on 2026-09-06 (user); the block below stays guarded
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const S = {

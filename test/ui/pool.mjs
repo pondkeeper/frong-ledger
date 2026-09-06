@@ -178,6 +178,7 @@ try {
     ok('no page errors', errors.length === 0, errors.join(' | ').slice(0, 300));
     if (errors.length || !/TODAY'S POND/.test(t)) console.log('TEXT:', t.slice(0, 700));
     ok("the board shows today's pond in FRONG", /TODAY'S POND 294k FRONG/.test(t), (t.match(/TODAY'S POND [^·]*/) || [''])[0]);
+    ok('pond page: no tip button and no tip-jar dialog', !(await page.$('#tipbtn')) && !(await page.$('#tipjar')));
     ok('the ≈USD line comes from the price hook (294k × $0.0084)', /≈ \$2,470/.test(t), (t.match(/≈ \$[0-9,]+/) || ['(none)'])[0]);
     ok('one line under the jackpot says what the game is, and the page never mentions the house cut', /toss a frong in before the \d+:\d\d [AP]M New York croak · one takes the pond, one gets their frongs back/.test(t) && !/house/i.test(t.replace(/HOUSE RULES/, '')), (t.match(/toss a frong in before[^·]*·[^·]*/) || [''])[0]);
     ok('arriving with a REGISTERED ?ref= shows the sender before connecting', /sent by alice/.test(t), (t.match(/sent by [^ ]*/) || ['(none)'])[0]);
@@ -330,6 +331,7 @@ try {
     await page.goto(`http://localhost:${PORT}/${file}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
     ok(`${file}: no page errors`, errors.length === 0, errors.join(' | ').slice(0, 200));
+    ok(`${file}: no tip button and no tip-jar dialog`, !(await page.$('#tipbtn')) && !(await page.$('#tipjar')) && !(await page.$('#tipline')));
     ok(`${file}: the nav has a POOL tab linking to pool.html`, (await page.$eval('.tabbar a[href="/pond"]', (a) => a.textContent.trim())) === '🎰 The Pond ↗');
     const htmlHrefs = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')).filter((h) => /\.html/.test(h) && !/^https?:/.test(h)));
     ok(`${file}: no internal link carries .html`, htmlHrefs.length === 0, htmlHrefs.join(' '));
