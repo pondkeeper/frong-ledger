@@ -666,7 +666,7 @@
     </div></div>` : "";
 
     const ranked = S.players.slice().sort((a, b) => (b.v.deposited > a.v.deposited ? 1 : b.v.deposited < a.v.deposited ? -1 : 0)).slice(0, 10);
-    const lead = `<div class="cab floor"><div class="scr"><div class="lab">TODAY'S POND</div>
+    const lead = `<div class="cab floor"><div class="scr"><div class="lab">WHO'S IN</div>
       <div class="grid3 head"><span>player${BOOST ? `<span class="long"> · counted</span>` : ""}</span><span>tossed<span class="long"> · earned in dividends</span></span></div>
       <div class="list">${ranked.length ? ranked.map((p, i) =>
         `<div class="grid3${same(p.addr, S.account) ? " me" : ""}"><span class="who">${i + 1}. ${same(p.addr, S.account) ? "<b class='won'>YOU</b>" : `<a href="${explorer(p.addr)}" rel="noopener">${short(p.addr)}</a>`}${BOOST && p.v.brokers ? ` <span class="dim brk">+${p.v.brokers} · ${multX(p.v.brokers)}</span>` : ""}</span><span class="n">${fmt(p.v.deposited)}<span class="dim sub"><span class="dot"> · </span>earned ${fmt(p.v.divEarned)}</span></span></div>`).join("")
