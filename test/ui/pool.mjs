@@ -332,7 +332,7 @@ try {
     await page.waitForTimeout(1500);
     ok(`${file}: no page errors`, errors.length === 0, errors.join(' | ').slice(0, 200));
     ok(`${file}: no tip button and no tip-jar dialog`, !(await page.$('#tipbtn')) && !(await page.$('#tipjar')) && !(await page.$('#tipline')));
-    ok(`${file}: the nav has a POOL tab linking to pool.html`, (await page.$eval('.tabbar a[href="/pond"]', (a) => a.textContent.trim())) === '🎰 The Pond ↗');
+    ok(`${file}: the nav has a POOL tab linking to pool.html`, (await page.$eval('.tabbar a[href="/pond"]', (a) => a.textContent.trim())) === '🪷 The Pond ↗');
     const htmlHrefs = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')).filter((h) => /\.html/.test(h) && !/^https?:/.test(h)));
     ok(`${file}: no internal link carries .html`, htmlHrefs.length === 0, htmlHrefs.join(' '));
     if (file === 'index.html') {
