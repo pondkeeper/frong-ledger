@@ -59,7 +59,9 @@ LAUNCH_TS = 1785442500
 def get(url, tries=4):
     for i in range(tries):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "frong-ledger/1.0"})
+            # Blockscout answers 403 to non-browser User-Agents since 2026-08-28 (every cron run failed
+            # from then on); a browser UA gets 200 on the same URLs
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36", "Accept": "application/json"})
             with urllib.request.urlopen(req, timeout=25) as r:
                 return json.load(r)
         except Exception as e:
