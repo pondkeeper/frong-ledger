@@ -108,6 +108,8 @@
 
 /* the phone: the jackpot, the countdown and CHIP IN on the first screen */
 @media (max-width:640px){
+  .op-toast{bottom:auto;top:12px;transform:translate(-50%,-12px)}   /* never over the button someone is about to tap */
+  .op-toast.on{transform:translate(-50%,0)}
   .board.in .one{display:none}            /* a player who is in knows the game; the board's YOU TODAY row says the rest */
   .desk .hi.inline{display:none}
   .desk .presets{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
