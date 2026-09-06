@@ -56,26 +56,45 @@ EXCLUDE = {
 # the sniper cohort (every age inflated by 900s)
 LAUNCH_TS = 1785442500
 
-def get(url, tries=4):
+# The whole run must finish inside the 10-minute cadence: a run that overruns piles up behind the
+# next one and nothing commits (2026-09-06: Blockscout 500s on address endpoints made runs take
+# 12-23 min). Past the deadline every fetch fails fast and each wallet keeps its prior numbers.
+RUN_START = time.time()
+RUN_BUDGET = int(os.environ.get("REFRESH_BUDGET_SEC", "420"))
+DEADLINE = RUN_START + RUN_BUDGET
+def out_of_time():
+    return time.time() > DEADLINE
+
+class FetchError(Exception):
+    pass
+
+def get(url, tries=3):
+    """JSON from url, or None after `tries` attempts (2 retries, 1 s / 3 s backoff) or past the deadline."""
     for i in range(tries):
+        if out_of_time():
+            print(f"  SKIP (out of time) {url[:100]}", file=sys.stderr)
+            return None
         try:
             # Blockscout answers 403 to non-browser User-Agents since 2026-08-28 (every cron run failed
             # from then on); a browser UA gets 200 on the same URLs
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36", "Accept": "application/json"})
-            with urllib.request.urlopen(req, timeout=25) as r:
+            with urllib.request.urlopen(req, timeout=15) as r:
                 return json.load(r)
         except Exception as e:
             if i == tries - 1:
                 print(f"  FAIL {url[:100]}: {e}", file=sys.stderr)
                 return None
-            time.sleep(2 * (i + 1))
+            time.sleep(1 + 2 * i)
 
 def iso2ts(s):
     return int(datetime.datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp())
 
-def paginate(url, max_pages, stop_fn=None):
-    """Yield items across Blockscout pages (newest first). stop_fn(item) True => stop."""
+def paginate(url, max_pages, stop_fn=None, strict=False):
+    """Yield items across Blockscout pages (newest first). stop_fn(item) True => stop.
+    strict: a page that cannot be fetched raises FetchError instead of ending the list early."""
     d = get(url)
+    if d is None and strict:
+        raise FetchError(url)
     n = 0
     while d:
         for it in d.get("items", []):
@@ -92,6 +111,8 @@ def paginate(url, max_pages, stop_fn=None):
         time.sleep(0.2)
         sep = "&" if "?" in url else "?"
         d = get(f"{url}{sep}{qs}")
+        if d is None and strict:
+            raise FetchError(url)
 
 def norm_transfer(it, KNOWN):
     try:
@@ -215,11 +236,19 @@ while d and pages < 5:
 top = ranked[:TOP_N]
 top_addrs = {w["addr"].lower() for w in top}
 print(f"ranked {len(ranked)} EOAs, top {len(top)} selected")
-# sanity gate: a failed /holders fetch must not publish an empty ledger
+# sanity gate: a failed /holders fetch must not publish an empty ledger — keep the prior ranking
+ranking_stale = False
 if len(top) < TOP_N and len(tracked) >= TOP_N:
-    print(f"ABORT: holder ranking returned only {len(top)} EOAs "
-          f"(prior state had {len(tracked)}) — refusing to write", file=sys.stderr)
-    sys.exit(1)
+    prior_top = sorted([w for w in tracked.values() if w.get("in_top")], key=lambda w: -w.get("balance", 0))[:TOP_N]
+    if len(prior_top) >= TOP_N:
+        print(f"holders unavailable ({len(top)} EOAs ranked) — ranking kept from the prior run", file=sys.stderr)
+        top = [{"addr": w["addr"], "name": w.get("name"), "balance": w.get("balance", 0.0), "is_contract": False, "aa": w.get("aa", False)} for w in prior_top]
+        top_addrs = {w["addr"].lower() for w in top}
+        ranking_stale = True
+    else:
+        print(f"ABORT: holder ranking returned only {len(top)} EOAs "
+              f"(prior state had {len(tracked)}) — refusing to write", file=sys.stderr)
+        sys.exit(1)
 
 # ---------------- transfers (incremental per wallet) ----------------
 def tx_order(t):
@@ -240,7 +269,7 @@ def refresh_wallet(addr, prior, force_full=False):
     known_last = prior["txs"][-1] if prior and prior["txs"] else None
     if force_full or not known_last:
         fresh, truncated = [], False
-        for it in paginate(f"{BS}/addresses/{addr}/token-transfers?token={TOKEN}", 120):
+        for it in paginate(f"{BS}/addresses/{addr}/token-transfers?token={TOKEN}", 120, strict=True):
             if it.get("__truncated__"):
                 truncated = True
                 continue
@@ -252,7 +281,7 @@ def refresh_wallet(addr, prior, force_full=False):
     cut = known_last["ts"] - OVERLAP
     fresh, truncated = [], False
     for it in paginate(f"{BS}/addresses/{addr}/token-transfers?token={TOKEN}", 8,
-                       lambda it: iso2ts(it["timestamp"]) < cut):
+                       lambda it: iso2ts(it["timestamp"]) < cut, strict=True):
         if it.get("__truncated__"):
             truncated = True
             continue
@@ -335,9 +364,29 @@ for w in fallen:
 
 work_addrs = {a.lower() for a, _b, _aa in work}
 
+def keep_prior(i, addr, prior, why):
+    """The wallet's numbers from the last committed data.json, marked stale — never a truncated history."""
+    print(f"  [{i+1}/{len(work)}] {addr[:10]} kept from prior ({why})", file=sys.stderr)
+    w = dict(prior)
+    w["in_top"] = addr.lower() in top_addrs
+    w["stale"] = True
+    w["stale_since"] = state.get("generated_at")
+    return w
+
 def process_wallet(item):
     i, (addr, bal, aa) = item
     prior = tracked.get(addr.lower())
+    if out_of_time() and prior:
+        return keep_prior(i, addr, prior, "out of time")
+    try:
+        return _process_wallet(i, addr, bal, aa, prior)
+    except FetchError as e:
+        if prior:
+            return keep_prior(i, addr, prior, "fetch failed")
+        print(f"  [{i+1}/{len(work)}] {addr[:10]} SKIPPED: no prior data and the fetch failed ({str(e)[:80]})", file=sys.stderr)
+        return None
+
+def _process_wallet(i, addr, bal, aa, prior):
     txs, trunc = refresh_wallet(addr, prior)
     stats = compute(addr, txs, bal)
     if stats["balance_mismatch"] and prior:
@@ -354,6 +403,7 @@ def process_wallet(item):
                 bal = live
             stats = compute(addr, txs, bal)
     stats["truncated"] = trunc
+    stats["stale"] = False
     n_new = len(txs) - (len(prior["txs"]) if prior else 0)
     if n_new or not prior:
         print(f"  [{i+1}/{len(work)}] {addr[:10]} {n_new:+d} txs (total {len(txs)})")
@@ -361,6 +411,18 @@ def process_wallet(item):
 
 with ThreadPoolExecutor(max_workers=6) as pool:
     wallets_out = [w for w in pool.map(process_wallet, enumerate(work)) if w]
+kept = sum(1 for w in wallets_out if w.get("stale"))
+refreshed = len(wallets_out) - kept
+top_refreshed = sum(1 for w in wallets_out if w["in_top"] and not w.get("stale"))
+prior_ts = state.get("generated_at")
+prior_iso = datetime.datetime.fromtimestamp(prior_ts, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ") if prior_ts else "n/a"
+print(f"SUMMARY {top_refreshed}/{TOP_N} top wallets refreshed ({refreshed}/{len(work)} tracked), {kept} kept from {prior_iso}"
+      f"{' (ranking kept too)' if ranking_stale else ''} in {int(time.time() - RUN_START)} s")
+# the gate is over the ranked top-N (what the site ranks); fallen wallets are secondary
+MIN_FRACTION = float(os.environ.get("REFRESH_MIN_FRACTION", "0.6"))
+if top_refreshed < MIN_FRACTION * TOP_N:
+    print(f"ABORT: only {top_refreshed}/{TOP_N} top wallets refreshed (< {int(MIN_FRACTION * 100)}%) — not writing", file=sys.stderr)
+    sys.exit(1)
 
 # ---------------- fee mechanics (no attribution) ----------------
 last_h = harvests[-1]["ts"] if harvests else 0
@@ -538,6 +600,9 @@ stats_block = {
     "burned_frong": burned_frong,
     "pending_fee_eth": pending_eth,
     "eth_usd": eth_usd,
+    "wallets_refreshed": refreshed,
+    "wallets_kept": kept,
+    "ranking_stale": ranking_stale,
 }
 print(f"intel: {len(cohort_stats)} cohorts | {len(movers)} movers | top10 {concentration['top10']:.1f}% "
       f"| +{len(concentration['entered'])}/-{len(concentration['exited'])} top-50 churn")

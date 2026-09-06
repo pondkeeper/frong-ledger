@@ -564,7 +564,8 @@ function renderVerdict() {
     net += n;
     if (n > 50000) buyers++; else if (n < -50000) sellers++;
   }
-  if (now - S.data.generated_at > 3600) {  // silence must not render as "holding"
+  const age = now - S.data.generated_at;
+  if (age > 3 * 3600) {  // three hours of silence must not render as "holding"
     el.className = 'verdict mid';
     el.innerHTML = `<span class="vmain">● DATA IS STALE</span>
       <span class="vsub">whale data last refreshed ${fmtAgo(S.data.generated_at)} — the pipeline may be down; verdict withheld</span>`;
@@ -575,9 +576,11 @@ function renderVerdict() {
     net > thr ? ['▲ WHALES ARE ACCUMULATING', 'up'] :
     net < -thr ? ['▼ WHALES ARE DISTRIBUTING', 'dn'] :
     ['● WHALES ARE HOLDING', 'mid'];
+  const kept = S.data.stats && S.data.stats.wallets_kept;
+  const asOf = age > 3600 ? `as of ${fmtAgo(S.data.generated_at)} · ` : (kept ? `${kept} wallets from the previous refresh · ` : '');
   el.className = 'verdict ' + cls;
   el.innerHTML = `<span class="vmain">${head}</span>
-    <span class="vsub">${net >= 0 ? '+' : ''}${fmtAmt(net)} FRONG net in 24h (≈${fmtUsd(Math.abs(net) * px)})
+    <span class="vsub">${asOf}${net >= 0 ? '+' : ''}${fmtAmt(net)} FRONG net in 24h (≈${fmtUsd(Math.abs(net) * px)})
       · ${buyers} buying vs ${sellers} selling
       · <a href="#signal" data-tab="signal" data-scroll="signal">see the tape ↓</a></span>`;
 }
