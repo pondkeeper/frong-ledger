@@ -7,7 +7,7 @@
 <meta name="description" content="How Frong Ledger computes cost basis, PnL, and whale flow — and the known limitations.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 <div class="sitehead">
@@ -90,6 +90,27 @@
     permissionless and nobody is obliged to; in practice a searcher does it within hours. And
     it can fire slightly <i>before</i> 100%, because a claimer can harvest fresh fees inside
     the same transaction, adding to the pot the meter hasn't seen yet.</p>
+
+  <h2 id="pool">The Frong Pool</h2>
+  <p>One pool a day in FRONG, on <a href="pool.html">the pool page</a>. Chip in any time before the
+    closing bell (4 PM New York; 500 FRONG minimum a time). Of each chip-in, <b>25%</b> is paid out on
+    the spot to everyone already in that day, pro-rata to what they put in (your own earlier
+    chip-ins included), <b>5%</b> to whoever sent you (or to the jackpot if nobody did),
+    <b>10% to the house</b>, and the remaining <b>60%</b> goes to the jackpot. At the bell one
+    player gets their money back (up to the jackpot) and another takes what is left. Your chance is
+    what you chipped in, nothing else. A chip-in is final; there are no withdrawals.</p>
+  <p>The number is <a href="https://drand.love" rel="noopener">drand</a>'s quicknet beacon for a
+    round fixed the moment the pool opens (five minutes after the bell), and the contract checks the
+    beacon's BLS signature itself on-chain; nobody — not the pondkeeper, not the keeper bot, not the
+    sequencer — can pick or delay it. Every past pool links its beacon on the page so anyone can
+    re-check the number at api.drand.sh. Ringing the bell is permissionless; the keeper is a
+    convenience. If the beacon were ever unavailable for a week, the round is abandoned and every
+    chip-in of that day is refundable pro-rata.</p>
+  <p>Terms are read live from the contract on the pool page (the house share is capped at 10% in
+    the code; the jackpot's share can never go below 50%). The owner cannot take FRONG out of the pool:
+    there is no rescue path for the pool token, by design. Sponsors who want to seed a jackpot send
+    FRONG to the pool's seed box, never to the pool itself, and anyone may then pull it into the open
+    pool. The contract is the same audited code as Firm Brokers' Office Pool on Robinhood Chain.</p>
 
   <h2>Known limitations</h2>
   <ul>

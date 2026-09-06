@@ -1,0 +1,9 @@
+{
+  "name": "frong-ledger-ui-tests",
+  "private": true,
+  "type": "module",
+  "description": "Playwright checks for docs/ (the pool page). node test/ui/pool.mjs from the repo root.",
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

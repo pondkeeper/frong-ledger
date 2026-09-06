@@ -12,7 +12,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <meta name="theme-color" content="#070a06">
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -44,6 +44,7 @@
       <button class="btn heroscan-cta" data-tab="scanner" data-scroll="lookup">
         🔍 Scan your wallet — PnL in 5 seconds</button>
       <a class="btn heroscan-cta hero-alt" href="memes.html">🖼 Meme pond — grab &amp; toss frogs</a>
+      <a class="btn heroscan-cta hero-alt heropool" id="herojackpot" href="pool.html" hidden>🎰 Today's jackpot: <b data-jp>—</b> · chip in before the 4 PM NY bell</a>
     </div>
     <div class="hudstats" id="stats" aria-label="Market stats"></div>
   </div>
@@ -81,6 +82,7 @@
     <button role="tab" data-tab="flywheel" aria-selected="false">🔄 Flywheel · 🔥 Burn</button>
     <a class="tablink" href="ledger.html">📒 The Ledger · all 50 whales ↗</a>
     <a class="tablink" href="memes.html">🐸 Meme pond ↗</a>
+    <a class="tablink" href="pool.html">🎰 The Pool ↗</a>
   </nav>
 
   <section class="tabpane active" id="pane-signal">
@@ -238,6 +240,7 @@
     audit it like everything else here.</p>
 </dialog>
 
-<script src="app.js?v=20"></script>
+<script src="pool-config.js?v=1"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>

@@ -1,0 +1,136 @@
+/* THE POOL — skinned with the ledger's tokens (style.css): phosphor green on
+   near-black, Plex Mono. Structure mirrors the page pool.js renders. */
+.op{font-family:'Plex Mono',ui-monospace,Menlo,monospace;font-size:14px;line-height:1.5}
+.op *{min-width:0}
+.op input{font:inherit;color:var(--ink)}
+.op button{font:inherit}
+.op button:disabled{opacity:.45;cursor:default}
+.op a{color:var(--accent)}
+.op b{color:var(--ink);font-weight:600}
+.op .hi{color:var(--ink);font-weight:600}
+.op .dim{color:var(--muted)}
+.op .fine{font-size:12px;line-height:1.5;color:var(--ink-2)}
+.op .lab{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.op .lab::before{content:"▸ ";color:var(--muted)}
+.op .won{color:var(--accent);text-shadow:var(--glow)}
+
+/* cards: the ledger's .card, tighter */
+.op .cab{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin:0 0 16px}
+.op .cab.board{border-color:rgba(168,224,90,.35);box-shadow:0 0 26px rgba(168,224,90,.08),inset 0 0 34px rgba(168,224,90,.03)}
+.op .scr>*+*{margin-top:8px}
+
+/* the winners tape */
+.op-ticker{overflow:hidden;width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;height:30px;margin:0 0 14px}
+.op-ticker .tape{white-space:nowrap;font-size:12px;line-height:30px;color:var(--ink-2);animation:tape 80s linear infinite;display:inline-block;padding-left:12px}
+.op-ticker .tape .up{color:var(--accent)}
+@keyframes tape{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.op-ticker .tape{animation:none}}
+
+/* the board: the jackpot is the hero */
+.board .hero{text-align:center}
+.board .pot{font-weight:600;font-size:52px;line-height:1.1;color:var(--ink);text-shadow:var(--glow),0 0 30px rgba(168,224,90,.22);margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.board .pot .num,.board .pot .unit{display:inline-block;white-space:nowrap}
+.board .pot .unit{font-size:.5em;color:var(--accent);margin-left:.25em;vertical-align:.12em}
+.board .pot.hot1{color:#f4ffe0;text-shadow:0 0 18px rgba(168,224,90,.75),0 0 60px rgba(168,224,90,.35)}
+.board .pot.hot2{animation:potpulse 1.2s ease-in-out infinite;color:#f4ffe0}
+@keyframes potpulse{0%,100%{text-shadow:0 0 14px rgba(168,224,90,.6),0 0 40px rgba(168,224,90,.3)}50%{text-shadow:0 0 30px rgba(168,224,90,.95),0 0 90px rgba(168,224,90,.5)}}
+@media (prefers-reduced-motion:reduce){.board .pot.hot2{animation:none}}
+.board .one{color:var(--ink);max-width:70ch;margin:4px auto 4px;font-size:13.5px}
+.board .last{color:var(--ink);padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--grid);font-size:13px}
+.board .last .mine{margin-top:4px}
+.board .row{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:12px;padding-top:12px;border-top:1px solid var(--grid)}
+.board .row>div{min-width:130px}
+.board .cd{font-size:28px;line-height:1.1;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.board .cd.hot{color:var(--accent);text-shadow:var(--glow)}
+.one .short,.board .cd+.fine .short{display:none}
+
+/* buttons */
+.op .go{font-family:inherit;font-size:12.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:#0b1105;border:0;border-radius:3px;padding:12px 20px;height:44px;cursor:pointer;box-shadow:0 0 18px rgba(168,224,90,.28)}
+.op .go:hover:not(:disabled){box-shadow:0 0 26px rgba(168,224,90,.45)}
+.op .go.quiet{background:var(--surface-3);color:var(--ink);box-shadow:none;border:1px solid var(--border)}
+.op .chip{font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-3);border:1px solid var(--border);border-radius:3px;padding:0 10px;height:34px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;text-decoration:none}
+.op .chip:hover:not(:disabled){color:var(--ink);border-color:rgba(168,224,90,.45);text-decoration:none}
+
+/* the desk */
+.desk{display:grid;gap:10px;margin-top:10px}
+.desk .amt{display:flex;gap:8px;align-items:center}
+.desk input[type=text]{flex:1;height:44px;padding:0 12px;background:var(--page);border:1px solid var(--baseline);border-radius:3px;color:var(--ink);font-size:18px;font-variant-numeric:tabular-nums}
+.desk input::placeholder{color:var(--muted)}
+.desk .presets{display:flex;flex-wrap:wrap;gap:6px}
+.desk .need{color:var(--accent)}
+.desk .go{width:100%}
+.desk details summary{cursor:pointer;list-style:none}
+.desk details summary::-webkit-details-marker{display:none}
+.desk details summary::before{content:"? ";color:var(--accent)}
+.desk .claims{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.desk .wallets{display:grid;gap:8px}
+
+/* the floor: board + feed */
+.grid3{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--grid)}
+.grid3 .who{min-width:0;overflow-wrap:anywhere}
+.grid3.head{color:var(--muted);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--baseline)}
+.grid3 .n{color:var(--ink);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.grid3 .brk{font-size:11px;white-space:nowrap}
+.grid3.me{color:var(--accent)}
+@media (max-width:720px){.grid3 .n .sub{display:block;text-align:right}.grid3 .n .sub .dot{display:none}}
+@media (max-width:520px){.one .long,.board .cd+.fine .long,.grid3.head .long{display:none}.one .short,.board .cd+.fine .short{display:inline}}
+.list{display:grid;gap:2px;margin-top:6px}
+.list .r{display:grid;grid-template-columns:1fr auto;gap:10px;padding:5px 0;border-bottom:1px solid var(--grid)}
+.list .r .n{color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.list .r .who{overflow-wrap:anywhere}
+.list .r.me{color:var(--accent)}
+.list .r.new{animation:slidein .6s ease-out}
+@keyframes slidein{from{opacity:0;transform:translateX(-14px);background:var(--accent-soft)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.list .r.new{animation:none}}
+.hist .r{grid-template-columns:1fr}
+.hist .r .line{display:flex;flex-wrap:wrap;gap:4px 14px}
+
+/* two columns on a desk, one on a phone */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:720px){.cols{grid-template-columns:1fr}}
+
+/* referral */
+.ref .link{display:flex;gap:8px;align-items:center}
+.ref .link code{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--page);border:1px solid var(--baseline);border-radius:3px;padding:8px 10px;color:var(--ink);font-size:12.5px}
+.ref .set{display:flex;gap:8px;margin-top:8px}
+.ref .set input{flex:1;height:40px;padding:0 12px;background:var(--page);border:1px solid var(--baseline);border-radius:3px;color:var(--ink);font-size:15px;text-transform:lowercase}
+.ref .share{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+
+.rules{color:var(--ink-2);font-size:13px;line-height:1.55}
+.rules p{margin:6px 0}
+.op .err{color:var(--down)}
+
+/* the toast */
+.op-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,12px);z-index:70;opacity:0;transition:.25s;background:var(--surface-3);color:var(--ink);border:1px solid rgba(168,224,90,.45);border-radius:4px;padding:9px 14px;font-size:12.5px;box-shadow:var(--shadow);max-width:calc(100vw - 32px);text-align:center;display:none}
+.op-toast.on{opacity:1;transform:translate(-50%,0);display:block}
+.op-toast.ok{color:var(--accent)} .op-toast.bad{color:var(--down);border-color:rgba(230,103,103,.5)}
+@media (prefers-reduced-motion:reduce){.op-toast{transition:none}}
+
+/* the phone: the jackpot, the countdown and CHIP IN on the first screen */
+@media (max-width:640px){
+  .pool-tabbar{padding:4px;margin-bottom:12px}
+  .pool-tabbar .tabbtn{display:none}
+  .pool-head{margin:0 0 12px}
+  .pool-head h1{font-size:24px}
+  .pool-head .tagline{font-size:10px}
+  .board .pot{font-size:34px}
+  .board .one{font-size:12.5px}
+  .board .row{gap:6px 18px;margin-top:8px;padding-top:8px}
+  .board .cd{font-size:22px}
+  .op .cab{padding:12px 14px;margin-bottom:12px}
+  .op-ticker{margin-bottom:10px}
+}
+/* short desktop windows: a compact head so the desk starts inside the first screen */
+@media (min-width:641px) and (max-height:720px){
+  .pool-tabbar{margin-bottom:10px;padding:4px}
+  .pool-tabbar [class]{padding:7px 12px}
+  .pool-head{margin:0 0 8px}
+  .pool-head h1{font-size:22px;margin-bottom:0}
+  .pool-head .tagline{display:none}
+  .board .last{padding-bottom:6px;margin-bottom:6px}
+  .board .pot{font-size:38px;margin:2px 0 2px}
+  .board .row{margin-top:8px;padding-top:8px}
+  .op .cab{padding:12px 16px;margin-bottom:10px}
+  .op-ticker{height:26px;margin-bottom:8px}
+  .op-ticker .tape{line-height:26px}
+}
