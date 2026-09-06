@@ -145,3 +145,30 @@
   .op-ticker{height:26px;margin-bottom:8px}
   .op-ticker .tape{line-height:26px}
 }
+
+/* GET MY LINK / GOT A CODE?: the live notes, the code row */
+.op .fine.ok{color:var(--accent)}
+.op .fine.bad{color:var(--down)}
+.ref .link code.big{flex:0 1 auto;font-size:16px;color:var(--accent);letter-spacing:.06em}
+.ref .link .dim{white-space:nowrap}
+.ref .share .go{flex:1 1 auto}
+.desk input[type=text]:disabled{color:var(--muted);opacity:.7}
+
+/* the referral card modal (poolcard.js): the card is pixel art on its own palette */
+@font-face{font-family:"Press Start 2P";src:url(fonts/press-start-2p.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"VT323";src:url(fonts/vt323.woff2) format("woff2");font-display:swap}
+.pc-overlay{position:fixed;inset:0;background:rgba(7,10,6,.86);z-index:65;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px;font-family:'Plex Mono',ui-monospace,Menlo,monospace;font-size:13px;line-height:1.5;color:var(--ink)}
+.pc-box{width:min(760px,100%);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px}
+.pc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pc-head .lab{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.pc-row{display:flex;gap:10px;align-items:center;margin:6px 0 10px}
+.pc-row .dim{color:var(--muted);white-space:nowrap}
+.pc-row input{flex:1;height:38px;padding:0 10px;background:var(--page);border:1px solid var(--baseline);border-radius:3px;color:var(--ink);font:inherit;font-size:14px}
+.pc-card canvas{width:100%;height:auto;display:block;border:1px solid var(--border);border-radius:4px}
+.pc-post{margin:10px 0}
+.pc-post .dim{color:var(--muted)}
+.pc-text{white-space:pre-wrap;background:var(--page);border:1px solid var(--baseline);border-radius:3px;padding:8px 10px;color:var(--ink);font-size:12.5px;line-height:1.45}
+.pc-actions{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+.pc-actions .chip,.pc-actions .go{font:inherit}
+.pc-hint{color:var(--ink-2);font-size:12px;margin-top:8px}
+@media (max-width:520px){.pc-actions{grid-template-columns:1fr 1fr}.pc-actions .go{grid-column:1 / -1}}

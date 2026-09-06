@@ -18,6 +18,13 @@ window.POOL_CFG = {
   presets: [1000, 2500, 5000, 10000, 25000],                  // whole tokens
   // USD per token, optional: the ledger's live DexScreener price (app.js keeps it in S.livePrice).
   price: () => (typeof S === "object" && S && S.livePrice) || null,
+  // the referral card (poolcard.js, drawn in the browser, posted on X): the pond's mark
+  // (48×48 pixel art, drawn at integer scales), the house line under the player, and the
+  // pond's own words for the card's lines
+  card: {
+    slug: "frong-pond", name: "THE FRONG POND", house: "FIRM BROKERS", mark: "/assets/mark.png",
+    words: { potLabel: "TODAY'S POND", subtitle: "one pond a day in {sym} · drawn by drand, checked on-chain", take: "one takes the pond · one gets their frongs back", before: "toss in before the {bell} New York croak", in: "is in today's pond", plays: "plays the pond", type: "type the code at your first toss, open the link", tomorrow: "tomorrow's pond is open" },
+  },
   copy: {
     connect: "CONNECT WALLET",
     post: "i tossed a frong in the pond: {jackpot} FRONG pond today. one takes it, one gets their frongs back. toss before the 4 PM New York croak.\n\n{link}",

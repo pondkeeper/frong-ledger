@@ -67,13 +67,13 @@ function fixture(dec, sym) {
     switch (sel) {
       case '0x062c1746': return '0x' + W(4_200n * U); // claimableDividends
       case '0x994ec7c7': return '0x' + W(0); // referralOwed
-      case '0x2cfc2716': return '0x' + Buffer.from('mockname').toString('hex').padEnd(64, '0'); // codeOf: a name already set
+      case '0x2cfc2716': return '0x' + (this.nocode ? W(0) : Buffer.from('mockname').toString('hex').padEnd(64, '0')); // codeOf: a name already set (unless nocode)
       case '0x2cf003c2': return '0x' + W(0); // referrer
       case '0xcaeacdb9': return '0x' + (this.landed ? playerView({ dep: 25_000n * U, earned: 0n }) : playerView({ dep: 0n, earned: 0n })); // playerView: in with 25k once the deposit landed
-      case '0x8820a363': return '0x' + arr([2]); // roundsOf
+      case '0x8820a363': return '0x' + arr(this.fresh ? [] : [2]); // roundsOf: played round 2, or never (fresh)
       case '0x11ad2f34': { // codeOwner(bytes32): "alice" is registered, anything else is not
         const code = Buffer.from(data.slice(10, 74), 'hex').toString('utf8').replace(/\0+$/, '');
-        return '0x' + (code === 'alice' ? WA(P[1].a) : W(0));
+        return '0x' + (code === 'alice' ? WA(P[1].a) : code === 'mockname' && !this.nocode ? WA(ME) : W(0));
       }
       case '0x8a19c8bc': return '0x' + W(3) + W(closesAt) + W(1) + W(now); // currentRound (+ chain clock)
       case '0x127f0b3f': return '0x' + W(3);
@@ -207,13 +207,37 @@ try {
     ok('connected: no unknown selector reached the rpc', unknown.length === 0, unknown.join(' | ').slice(0, 200));
     const toastNow = await page.evaluate(() => document.getElementById('op-toast').textContent);
     ok('connected: the "opening your wallet…" toast is replaced by "connected · 0x…"', /^connected · 0x0000…0ffe$/.test(toastNow), toastNow);
-    ok('connected: the desk shows the balance and the wallet', /balance 100k FRONG · 0x0000…0ffe · sent by alice/.test(t2), (t2.match(/balance [^·]*· 0x[^ ]* · [^ ]* [^ ]*/) || [''])[0]);
+    ok('connected: the desk shows the balance and the wallet', /balance 100k FRONG · 0x0000…0ffe/.test(t2), (t2.match(/balance [^·]*· 0x[^ ]*/) || [''])[0]);
+    // this wallet tossed in round 2 without a sender: the link is NOT its sender, and the page says why
+    ok('already in without a sender: the link is not shown as the sender, and the page says the link changes nothing', !/sent by alice/.test(t2) && /link 'alice' changes nothing now · a sender is set at your first toss, and you are already in/.test(t2), (t2.match(/link 'alice'[^.]*/) || ['(none)'])[0]);
     ok('connected: YOU took the jackpot in the banner, and a CLAIM for the dividends', /YOU took the pond: 160k FRONG/.test(t2) && /you have 4,200 in dividends to claim/.test(t2), (t2.match(/YOU took[^·]*/) || [''])[0]);
-    ok('connected: a known link code needs no sender field', !(await page.$('#op-ref')));
+    ok('connected and already in: GOT A CODE? is there but disabled, with the honest reason', await page.$eval('#op-ref', (i) => i.disabled) && /you tossed before without a code · a sender is set only at the first toss, so a code changes nothing now/.test(t2), (t2.match(/GOT A CODE\?.{0,160}/) || ['(none)'])[0]);
     ok('connected: dividends to claim are shown with a live CLAIM', /dividends 4,200/.test(t2) && await page.$eval('[data-act=claimdiv]', (b) => !b.disabled));
-    ok('connected: the link shows with COPY, POST ON X and SHARE ON TELEGRAM', /YOUR LINK/.test(t2) && /\?ref=mockname/.test(t2) && /POST ON X/.test(t2) && /SHARE ON TELEGRAM/.test(t2));
-    const xHref = await page.$eval('.ref a[href*="x.com"]', (a) => decodeURIComponent(a.href));
-    ok('the X post carries the jackpot and the clean page link', /294k FRONG pond/.test(xHref) && /\/pond\?ref=mockname/.test(xHref) && !/\.html/.test(xHref), xHref.slice(0, 160));
+    ok('connected: YOUR LINK shows the link, the code, COPY LINK, COPY CODE, MAKE MY CARD · POST ON X and SHARE ON TELEGRAM', /YOUR LINK .*\?ref=mockname COPY LINK code mockname COPY CODE/.test(t2) && /MAKE MY CARD · POST ON X/.test(t2) && /SHARE ON TELEGRAM/.test(t2), (t2.match(/YOUR LINK.{0,140}/) || [''])[0]);
+    // the referral card: 1200×628, drawn, the post carries the jackpot and the clean page link
+    await page.locator('[data-act=card]').click();
+    await page.waitForTimeout(1500);
+    const card = await page.evaluate(() => {
+      const cv = document.querySelector('.pc-overlay canvas'); if (!cv) return null;
+      const x = cv.getContext('2d'); const d = x.getImageData(0, 0, cv.width, cv.height).data;
+      let lit = 0; for (let i = 0; i < d.length; i += 4 * 97) if (d[i] + d[i + 1] + d[i + 2] > 200) lit++;
+      // the mark: the pond's PNG, not a gold coin — sample the header mark box for coin-gold
+      let gold = 0, n = 0; for (let y = 44; y < 140; y++) for (let xx = 48; xx < 144; xx++) { const i = (y * cv.width + xx) * 4; n++; if (d[i] > 220 && d[i + 1] > 170 && d[i + 2] < 90) gold++; }
+      return { w: cv.width, h: cv.height, lit, gold: gold / n, text: document.querySelector('.pc-text').textContent, btns: [...document.querySelectorAll('.pc-actions button')].map((b) => b.textContent), png: cv.toDataURL('image/png') };
+    });
+    ok('MAKE MY CARD opens a 1200×628 card with something drawn on it', !!card && card.w === 1200 && card.h === 628 && card.lit > 200, card ? `lit ${card.lit}` : 'no canvas');
+    ok('the card wears the pond\'s mark PNG, not the coin fallback', !!card && card.gold < 0.25, card ? `${(card.gold * 100).toFixed(0)}% coin-gold` : '');
+    ok('the post carries the jackpot and the clean page link', !!card && /294k FRONG pond/.test(card.text) && /\/pond\?ref=mockname/.test(card.text) && !/\.html/.test(card.text), card ? card.text.slice(0, 160) : '');
+    ok('the card offers POST ON X, DOWNLOAD and COPY LINK', !!card && card.btns.join('|') === 'POST ON X|DOWNLOAD|COPY LINK', card ? card.btns.join('|') : '');
+    if (card) { const { writeFileSync } = await import('node:fs'); writeFileSync(shot('pool-card.png'), Buffer.from(card.png.split(',')[1], 'base64')); }
+    await page.keyboard.press('Escape');
+    ok('Escape closes the card', !(await page.$('.pc-overlay')));
+    ok('the results banner offers SHARE THE RESULT', !!(await page.$('[data-act=wincard]')));
+    await page.locator('[data-act=wincard]').click();
+    await page.waitForTimeout(1200);
+    const wcard = await page.evaluate(() => { const cv = document.querySelector('.pc-overlay canvas'); return cv ? { w: cv.width, h: cv.height, text: document.querySelector('.pc-text').textContent, handleRow: !!document.querySelector('.pc-handle') } : null; });
+    ok('SHARE THE RESULT draws the winner card (no handle row) with the paid-out post', !!wcard && wcard.w === 1200 && !wcard.handleRow && /the croak: 260k FRONG paid out of the pond/.test(wcard.text), wcard ? wcard.text.slice(0, 120) : 'no canvas');
+    await page.keyboard.press('Escape');
     ok('connected: the bell button is live', await page.$eval('[data-act=bell]', (b) => !b.disabled));
     ok('the presets are the config\'s, in whole tokens', (await page.$$eval('.presets .chip', (bs) => bs.map((b) => b.textContent).join('|'))) === 'MIN|1k|2.5k|5k|10k|25k|MAX');
     await page.locator('[data-act=min]').click();
@@ -235,8 +259,9 @@ try {
     const sentTx = await page.evaluate(() => window.__SENT || []);
     ok('ONE slow click on CHIP IN with the amount box focused is enough', sentTx.length >= 1, `${sentTx.length} tx after one click · toast: ` + (await page.evaluate(() => (document.getElementById('op-toast') || {}).textContent)));
     ok('CHIP IN below the allowance sends the approval first (max allowance to the pool)', sentTx.length >= 1 && sentTx[0].to.toLowerCase() === TOKEN.toLowerCase() && sentTx[0].data === '0x095ea7b3' + WA(POOL) + 'f'.repeat(64), sentTx.map((x) => x.data.slice(0, 10)).join(','));
-    const want = '0xb927dab6' + W(25_000n * 10n ** 18n) + W(96) + Buffer.from('alice').toString('hex').padEnd(64, '0') + W(0);
-    ok('…and goes straight on to deposit(25,000, [], "alice") with the exact calldata', sentTx.length >= 2 && sentTx[1].to.toLowerCase() === POOL.toLowerCase() && sentTx[1].data === want, sentTx[1] ? sentTx[1].data.slice(0, 74) : '(no second tx)');
+    // this wallet tossed in round 2 already: a sender is set only at the FIRST toss, so the link's code is NOT sent (bytes32 zero)
+    const want = '0xb927dab6' + W(25_000n * 10n ** 18n) + W(96) + W(0) + W(0);
+    ok('…and goes straight on to deposit(25,000, [], NO code — already in, a link opened later never re-attributes) with the exact calldata', sentTx.length >= 2 && sentTx[1].to.toLowerCase() === POOL.toLowerCase() && sentTx[1].data === want, sentTx[1] ? sentTx[1].data.slice(0, 74) : '(no second tx)');
     ok('the deposit gas is the estimate +25% (436,672 → 545,840), with a fee ceiling from the node price', sentTx.length >= 2 && parseInt(sentTx[1].gas, 16) === 545840 && sentTx[1].maxFeePerGas === '0x' + ((100000000n * 5n) / 4n).toString(16), sentTx[1] ? `gas ${parseInt(sentTx[1].gas, 16)} maxFee ${sentTx[1].maxFeePerGas}` : '');
     const t3b = await text();
     ok('the deposit shows on the desk right after the receipt — the page waited for OUR rpc to reach the receipt block (97, 97, then 100), no idle poll needed', /you're in with 25k/.test(t3b) && /YOU TODAY 25k FRONG/.test(t3b), (t3b.match(/you're in[^·]*/) || ['(not shown)'])[0] + ` · blockNumber polls ${fx.lag}`);
@@ -278,6 +303,45 @@ try {
       ok('DISCONNECT asked the wallet to revoke permissions (best effort)', (await page.evaluate(() => (window.__REVOKED || 0))) >= 1);
     }
     await page.close();
+  }
+  // ---------------------------------------------------------------- a fresh wallet, no code yet: GOT A CODE? live, GET MY LINK live
+  {
+    fx.fresh = true; fx.nocode = true; fx.landed = false; // never tossed, no name yet (the desk pass's deposit landed on the shared fixture)
+    const { page, errors, unknown, text } = await open('fresh', 1280, 900, fx, {}, { query: '?ref=alice' });
+    await page.locator('[data-act=connect]').click();
+    await page.waitForTimeout(2500);
+    const t = await text();
+    ok('fresh: no page errors, no unknown selectors', errors.length === 0 && unknown.length === 0, errors.concat(unknown).join(' | ').slice(0, 200));
+    ok('fresh wallet, known link: GOT A CODE? is prefilled with the link code', (await page.$eval('#op-ref', (i) => i.value)) === 'alice', String(await page.$eval('#op-ref', (i) => i.value)));
+    const note = () => page.$eval('#op-refnote', (n) => n.className + ' :: ' + n.textContent);
+    ok('…and the note already says who, without a round-trip', /fine ok :: sent by alice · locks at your first toss/.test(await note()), await note());
+    ok('the balance line does not repeat the sender (the field is the one place)', (t.match(/sent by alice/g) || []).length === 1, (t.match(/sent by alice/g) || []).length + '×');
+    await page.fill('#op-ref', '');
+    await page.type('#op-ref', 'https://frong.io/pond?ref=Alice ');
+    await page.waitForTimeout(900);
+    ok('pasting a whole link collapses it to the code, checked live', (await page.$eval('#op-ref', (i) => i.value)) === 'alice' && /fine ok :: sent by alice/.test(await note()), (await page.$eval('#op-ref', (i) => i.value)) + ' · ' + await note());
+    await page.fill('#op-ref', 'bobb');
+    await page.waitForTimeout(900);
+    ok('an unregistered code is called out live', /fine bad :: 'bobb' is not a registered code/.test(await note()), await note());
+    await page.fill('#op-ref', '');
+    await page.waitForTimeout(200);
+    ok("an emptied field says the link's code was cleared", /no sender · you cleared the link's code 'alice'/.test(await note()), await note());
+    // GET MY LINK
+    ok('no code yet: the box is GET MY LINK', /GET MY LINK pick a name once — one transaction/.test(t), (t.match(/GET MY LINK.{0,80}/) || ['(none)'])[0]);
+    const nnote = () => page.$eval('#op-namenote', (n) => n.className + ' :: ' + n.textContent);
+    await page.fill('#op-code', 'alice');
+    await page.waitForTimeout(900);
+    ok('a taken name is called out live', /fine bad :: 'alice' is taken/.test(await nnote()), await nnote());
+    await page.fill('#op-code', 'newname');
+    await page.waitForTimeout(900);
+    ok('a free name shows the exact link it will make', /fine ok :: newname is free · your link will be .*\/pond\?ref=newname/.test(await nnote()), await nnote());
+    await page.locator('[data-act=setcode]').click();
+    await page.waitForTimeout(1500);
+    const sent = await page.evaluate(() => window.__SENT || []);
+    ok('GET MY LINK sends ONE setCode transaction with the name', sent.length === 1 && sent[0].data === '0xb9ef767f' + Buffer.from('newname').toString('hex').padEnd(64, '0'), sent.map((x) => x.data.slice(0, 10)).join(','));
+    await page.locator('.desk').screenshot({ path: shot('pool-fresh-desk.png') });
+    await page.close();
+    fx.fresh = false; fx.nocode = false;
   }
   // ---------------------------------------------------------------- phone 390×844
   {

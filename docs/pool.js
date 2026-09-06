@@ -257,6 +257,7 @@
   const S = {
     account: null, cur: null, curId: 0, closesAt: 0, delay: 300, skew: 0, count: 0, roundCount: 0,
     players: [], feed: [], history: [], due: [], me: null, claimable: 0n, refOwed: 0n, code: "", referrer: ZERO,
+    referrerCode: "", referrerCodeFor: null, inBefore: false, refCheck: null, nameCheck: null,
     knobs: null, refOwner: ZERO, potShown: 0n, seenDeposits: 0, balance: 0n, allowance: 0n,
     fatal: "", loaded: false, busy: false, pickWallet: null, wrongChain: false,
   };
@@ -278,6 +279,7 @@
     else if (chainSym && chainSym.toUpperCase() !== SYM.toUpperCase()) S.fatal = `this page is configured for ${SYM}, the token on the chain calls itself ${esc(chainSym)}: the desk is closed until the config is fixed`;
     else S.fatal = "";
     S.refOwner = head[6] && head[6].length >= 66 ? addr(head[6], 0) : ZERO;
+    if (refCode() && !(S.refCheck && S.refCheck.code === refCode())) S.refCheck = { code: refCode(), owner: S.refOwner, error: false };
     // the terms a round opening now would take (the board's rules before the first chip-in of a day)
     if (head[5] && head[5].length >= 2 + 64 * 6) S.knobs = { minDeposit: big(head[5], 0), divBps: num(head[5], 1), refBps: num(head[5], 2), houseBps: num(head[5], 3), boostBps: num(head[5], 4), boostCapBps: num(head[5], 5) };
     const cr = head[0];
@@ -297,6 +299,7 @@
       reqs.push({ to: P, data: SEL.referralOwed + word(S.account) });
       reqs.push({ to: P, data: SEL.codeOf + word(S.account) });
       reqs.push({ to: P, data: SEL.referrer + word(S.account) });
+      reqs.push({ to: P, data: SEL.roundsOf + word(S.account) }); // any toss ever? then the sender is settled
       reqs.push({ to: T, data: SEL.balanceOf + word(S.account) });
       reqs.push({ to: T, data: SEL.allowance + word(S.account) + word(P) });
       if (open) reqs.push({ to: P, data: SEL.playerView + word(S.curId) + word(S.account) });
@@ -309,8 +312,16 @@
     for (const id of recent) { const r = decodeRound(res[k++]); if (r) S.history.push(Object.assign({ id }, r)); }
     if (S.account) {
       S.claimable = big(res[k++], 0); S.refOwed = big(res[k++], 0); S.code = fromBytes32(w(res[k++], 0)); S.referrer = addr(res[k++], 0);
+      S.inBefore = decodeUintArray(res[k++]).length > 0;
       S.balance = big(res[k++], 0); S.allowance = big(res[k++], 0);
       S.me = open ? decodePlayer(res[k++]) : null;
+      // the sender by name when they have one (one extra call, only while it changes)
+      if (S.referrer !== ZERO && S.referrerCodeFor !== S.referrer) {
+        S.referrerCodeFor = S.referrer;
+        try { S.referrerCode = fromBytes32(w((await callBatch([{ to: P, data: SEL.codeOf + word(S.referrer) }]))[0], 0)); } catch (e) { S.referrerCode = ""; }
+      }
+      // your own link can never send you: never show it as the sender, forget it
+      if (same(S.refOwner, S.account)) { try { if (localStorage.getItem(REF_KEY) === refCode()) localStorage.removeItem(REF_KEY); } catch (e) {} }
     }
     // every player (join order; the board is top-10 by deposit, so no page may be skipped) and the last 12 deposits
     if (open && S.cur && S.cur.playerCount > 0) {
@@ -335,7 +346,7 @@
     const p = provider();
     try { localStorage.removeItem(WALLET_KEY); } catch (e) {}
     chosenProvider = null; S.account = null; S.me = null; S.pickWallet = null; S.wrongChain = false;
-    S.claimable = 0n; S.refOwed = 0n; S.code = ""; S.referrer = ZERO; S.balance = 0n; S.allowance = 0n;
+    S.claimable = 0n; S.refOwed = 0n; S.code = ""; S.referrer = ZERO; S.balance = 0n; S.allowance = 0n; S.inBefore = false; S.referrerCode = ""; S.referrerCodeFor = null; S.nameCheck = null;
     render();
     if (p && p.request) { try { await p.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }); } catch (e) { /* not every wallet has it */ } }
     toast("disconnected", true);
@@ -448,8 +459,21 @@
   }
   async function chipIn(amount) {
     const P = CFG.pool;
-    const typed = (host.querySelector("#op-ref") || {}).value;
-    const code = S.referrer === ZERO ? (typed && validCode(String(typed).trim().toLowerCase()) ? String(typed).trim().toLowerCase() : (S.refOwner !== ZERO ? refCode() : "")) : "";
+    const field = host.querySelector("#op-ref");
+    const typed = parseRef((field || {}).value);
+    let code = "";
+    if (senderOpen()) {
+      if (field && !field.disabled) {
+        if (typed) {
+          if (!validCode(typed)) return toast("a code is 3 to 20 letters or digits", false);
+          if (S.code && typed === S.code) return toast("that is your own code — it cannot send you", false);
+          let owner = ZERO; try { owner = await ownerOf(typed); } catch (e) { return toast("could not check the code — try again", false); }
+          if (owner === ZERO) return toast(`code '${typed}' is not registered · check the spelling`, false);
+          if (same(owner, S.account)) return toast("that is your own code — it cannot send you", false);
+          code = typed;
+        }
+      } else code = linkCode();
+    }
     // deposit(uint128 amount, uint256[] brokerIds, bytes32 refCode) — no brokers: an empty array at offset 96
     const data = SEL.deposit + word(amount) + word(96) + (code ? bytes32(code) : word(0)) + word(0);
     if (S.allowance < amount) {
@@ -550,6 +574,91 @@
   const xIntent = (code) => "https://x.com/intent/post?text=" + encodeURIComponent(postText(code));
   const tgIntent = (code) => "https://t.me/share/url?url=" + encodeURIComponent(`${pageLink()}?ref=${code}`) + "&text=" + encodeURIComponent(postText(code).replace(/\n*\{?https?:\/\/\S+\s*$/, "").replace(pageLink() + `?ref=${code}`, "").trim());
   const explorer = (a) => `${CFG.explorer}/address/${a}`;
+  const refLink = (code) => `${pageLink()}?ref=${code}`;
+  /// the link's code when it can actually send this wallet: registered, and not the wallet's own
+  const linkCode = () => (refCode() && S.refOwner !== ZERO && !same(S.refOwner, S.account) ? refCode() : "");
+  /// the sender is settled once, by the contract, at the first toss that carries a code; the
+  /// page sends a code ONLY before the wallet's first toss, so a link opened later changes nothing
+  const senderOpen = () => S.referrer === ZERO && !S.inBefore && !(S.me && S.me.deposited > 0n);
+
+  // ---------------------------------------------------------------- live checks
+  /// a code, a whole link with ?ref= in it, or "@name" → the code, lowercased
+  function parseRef(raw) {
+    let t = String(raw || "").trim();
+    const m = t.match(/[?&#]ref=([A-Za-z0-9]{1,20})/);
+    if (m) t = m[1];
+    return t.replace(/^@/, "").replace(/\s+/g, "").toLowerCase();
+  }
+  async function ownerOf(code) {
+    const r = (await callBatch([{ to: CFG.pool, data: SEL.codeOwner + bytes32(code) }]))[0];
+    return r && r.length >= 66 ? addr(r, 0) : ZERO;
+  }
+  let checkT = null, checkSeq = 0;
+  function refNote(code, check) {
+    const pct = terms().refBps / 100;
+    if (!code && refCode() && same(S.refOwner, S.account)) return { cls: "fine", html: "that is your own link · it cannot send you, share it" };
+    if (!code) return { cls: "fine", html: linkCode() ? `no sender · you cleared the link's code '${esc(linkCode())}' — type it back to keep them` : `got a code from a player? put it here, or paste their link. They earn ${pct}% of everything you toss, never out of your share. Locks at your first toss.` };
+    if (!validCode(code)) return { cls: "fine bad", html: "a code is 3 to 20 letters or digits" };
+    if (S.code && code === S.code) return { cls: "fine bad", html: "that is your own code · it cannot send you, share it instead" };
+    if (!check || check.code !== code) return { cls: "fine", html: "checking…" };
+    if (check.error) return { cls: "fine", html: "could not read the chain · the code is checked again at your toss" };
+    if (same(check.owner, S.account)) return { cls: "fine bad", html: "that is your own code · it cannot send you, share it instead" };
+    if (check.owner === ZERO) return { cls: "fine bad", html: `'${esc(code)}' is not a registered code · check the spelling` };
+    return { cls: "fine ok", html: `sent by <b>${esc(code)}</b> · locks at your first toss · they earn ${pct}% of everything you toss, never out of your share` };
+  }
+  function nameNote(code, check) {
+    if (!code) return { cls: "fine", html: `3 to 20 lowercase letters or digits · your link will be ${esc(pageLink().replace(/^https?:\/\//, ""))}?ref=<b>yourname</b>` };
+    if (!validCode(code)) return { cls: "fine bad", html: /[^a-z0-9]/.test(code) ? "lowercase letters and digits only" : code.length < 3 ? "at least 3 characters" : "at most 20 characters" };
+    if (!check || check.code !== code) return { cls: "fine", html: "checking…" };
+    if (check.error) return { cls: "fine", html: "could not read the chain · it is checked again when you press GET MY LINK" };
+    if (check.owner !== ZERO) return { cls: "fine bad", html: `'${esc(code)}' is taken · try another` };
+    return { cls: "fine ok", html: `<b>${esc(code)}</b> is free · your link will be ${esc(refLink(code).replace(/^https?:\/\//, ""))}` };
+  }
+  function liveCheck(input, isName) {
+    const note = host.querySelector(isName ? "#op-namenote" : "#op-refnote");
+    if (!note) return;
+    const code = isName ? String(input.value || "").trim().toLowerCase() : parseRef(input.value);
+    if (!isName && code !== input.value && /[?&#]ref=|@|\s/.test(input.value)) input.value = code; // a pasted link collapses to its code
+    const slot = isName ? "nameCheck" : "refCheck";
+    const paint = () => { const n = (isName ? nameNote : refNote)(code, S[slot]); note.className = n.cls; note.innerHTML = n.html; };
+    clearTimeout(checkT);
+    if (S[slot] && S[slot].code === code) return paint();
+    S[slot] = null; paint();
+    if (!validCode(code) || (!isName && S.code && code === S.code)) return;
+    const seq = ++checkSeq;
+    checkT = setTimeout(async () => {
+      let owner = ZERO, error = false;
+      try { owner = await ownerOf(code); } catch (e) { error = true; }
+      if (seq !== checkSeq) return;
+      S[slot] = { code, owner, error };
+      if (host.querySelector(isName ? "#op-namenote" : "#op-refnote")) paint();
+    }, 400);
+  }
+  function onInput(e) {
+    const t = e.target;
+    if (!t || t.tagName !== "INPUT") return;
+    if (t.id === "op-ref") liveCheck(t, false);
+    else if (t.id === "op-code") liveCheck(t, true);
+  }
+  /// GOT A CODE? at the desk: live while the sender is open, disabled with the reason once it is not
+  function refField(kept) {
+    const pct = terms().refBps / 100;
+    if (senderOpen()) {
+      const value = kept != null ? kept : (linkCode() || (refCode() && !same(S.refOwner, S.account) ? refCode() : ""));
+      const n = refNote(parseRef(value), S.refCheck);
+      return `<div class="lab" style="margin-top:8px">GOT A CODE?</div>
+      <div class="amt"><input type="text" id="op-ref" placeholder="a code, or a link · optional" value="${esc(value)}" maxlength="200" autocapitalize="off" spellcheck="false" autocomplete="off"></div>
+      <div class="${n.cls}" id="op-refnote">${n.html}</div>`;
+    }
+    const settled = S.referrer !== ZERO;
+    const who = settled ? (S.referrerCode ? esc(S.referrerCode) : short(S.referrer)) : "";
+    return `<div class="lab" style="margin-top:8px">GOT A CODE?</div>
+      <div class="amt"><input type="text" id="op-ref" value="${who}" placeholder="—" disabled></div>
+      <div class="fine" id="op-refnote">${settled ? `your sender was set at your first toss: <b>${who}</b> · ${pct}% of every toss you make goes to them, never out of your share` : "you tossed before without a code · a sender is set only at the first toss, so a code changes nothing now"}</div>`;
+  }
+  /// what the card needs to know about this pond
+  const CARD = CFG.card || {};
+  const cardBranch = () => ({ slug: CARD.slug || "pond", branch: CARD.name || CFG.name || "THE POND", house: CARD.house || "FIRM BROKERS", symbol: SYM, mark: CARD.mark || "", words: CARD.words || {} });
 
   function render() {
     if (!host) return;
@@ -558,7 +667,7 @@
     // being clicked, and a re-render before the mouse-up replaces that button.)
     const active = document.activeElement;
     if (active && host.contains(active) && active.tagName === "INPUT" && active.type === "text") return;
-    const keep = { amt: (host.querySelector("#op-amt") || {}).value, code: (host.querySelector("#op-code") || {}).value, ref: (host.querySelector("#op-ref") || {}).value, refOpen: !!(host.querySelector("#op-refwhy") || {}).open };
+    const keep = { amt: (host.querySelector("#op-amt") || {}).value, code: (host.querySelector("#op-code") || {}).value, ref: (host.querySelector("#op-ref") || {}).value };
 
     const r = S.cur;
     const now = Math.floor(Date.now() / 1000) - S.skew;
@@ -573,9 +682,14 @@
     const bellNY = S.closesAt ? nyTime(S.closesAt) : "4:00 PM";
     const youWon = (a) => same(a, S.account);
     const buyHref = CFG.buyUrl || null;
-    const codeKnown = !!refCode() && S.refOwner !== ZERO;
-    const sender = S.referrer !== ZERO ? short(S.referrer) : codeKnown ? esc(refCode()) : "";
-    const badCode = refCode() && !codeKnown && S.loaded ? `<div class="fine">link code '${esc(refCode())}' is not registered · their ${T.refBps / 100}% would go to the pond</div>` : "";
+    const codeKnown = !!linkCode();
+    const ownLink = !!refCode() && !!S.account && same(S.refOwner, S.account);
+    const settled = S.referrer !== ZERO;
+    const sender = settled ? (S.referrerCode ? esc(S.referrerCode) : short(S.referrer)) : codeKnown && (!S.account || senderOpen()) ? esc(refCode()) : "";
+    const senderNote = sender && !settled ? (S.account ? " · locks at your first toss" : " · set at your first toss") : "";
+    let badCode = refCode() && !codeKnown && !ownLink && !settled && S.loaded ? `<div class="fine">link code '${esc(refCode())}' is not registered · their ${T.refBps / 100}% would go to the pond</div>` : "";
+    if (ownLink && !settled) badCode = `<div class="fine">that is your own link · it cannot send you, share it</div>`;
+    else if (codeKnown && S.account && !settled && !senderOpen()) badCode = `<div class="fine">link '${esc(refCode())}' changes nothing now · a sender is set at your first toss, and you are already in</div>`;
     const usdLine = (units) => usd(units);
 
     // ---- the results banner: from the draw until the next bell
@@ -591,6 +705,7 @@
         if (S.claimable > 0n) mine.push(`you have ${fmt(S.claimable)} in dividends to claim → <button class="chip" data-act="claimdiv" type="button">CLAIM</button>`);
         if (mine.length) banner += `<div class="mine">${mine.join(" · ")}</div>`;
       }
+      if (window.__POOL_CARD) banner += ` <button class="chip mini" data-act="wincard" data-id="${last.id}" type="button">SHARE THE RESULT</button>`;
       banner += `</div>`;
     }
 
@@ -636,7 +751,7 @@
         ? `<div class="lab">WHICH WALLET?</div><div class="wallets">${S.pickWallet.map((x, i) => `<button class="go" data-act="wallet" data-i="${i}" type="button">${esc(COPY.connect || "CONNECT")} · ${esc(x.info.name).toUpperCase()}</button>`).join("")}</div><div class="fine">this browser has more than one wallet · the one you pick is remembered here until you <button class="chip" data-act="switch" type="button">SWITCH WALLET</button></div>`
         : S.wrongChain
         ? `<div class="need">that wallet cannot switch to ${esc(CFG.chainName || "this chain")} — MetaMask (or any wallet with ${esc(CFG.chainName || "the chain")} added) works</div><div class="claims"><button class="go" data-act="switch" type="button">SWITCH WALLET</button></div>`
-        : `<button class="go" data-act="connect" type="button">${esc(COPY.connect || "CONNECT WALLET")}</button><div class="fine">connect a wallet on ${esc(CFG.chainName || "the chain")} to toss, claim, or make it croak${sender ? ` · sent by <b>${sender}</b>` : ""}</div>${badCode}`;
+        : `<button class="go" data-act="connect" type="button">${esc(COPY.connect || "CONNECT WALLET")}</button><div class="fine">connect a wallet on ${esc(CFG.chainName || "the chain")} to toss, claim, or make it croak${sender ? ` · sent by <b>${sender}</b>${senderNote}` : ""}</div>${badCode}`;
     } else {
       const presets = (CFG.presets || []).map((n) => `<button class="chip" data-act="preset" data-n="${n}" type="button">${n >= 1e6 ? (n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 }) + "M" : n >= 1000 ? (n / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "k" : n.toLocaleString("en-US")}</button>`).join("");
       deskBody = `
@@ -644,25 +759,28 @@
       ${poor ? `<div class="need">you need at least ${fmt(T.minDeposit)} ${SYM} to toss${buyHref ? ` · <a href="${esc(buyHref)}" target="_blank" rel="noopener">get ${SYM} →</a>` : ""}</div>` : ""}
       <div class="amt"><input type="text" inputmode="decimal" id="op-amt" placeholder="${fmtExact(T.minDeposit)} min" autocomplete="off"></div>
       <div class="presets"><button class="chip" data-act="min" type="button">MIN</button>${presets}<button class="chip" data-act="max" type="button">MAX</button></div>
+      ${refField(keep.ref)}
       <button class="go" data-act="chip" type="button" ${left > 0 && !poor ? "" : "disabled"}>${left > 0 ? (me && me.deposited > 0n ? "TOSS MORE" : "TOSS A FRONG") : "CROAKED — NEXT POND AT THE CROAK"}</button>
       ${firstTime && !poor ? `<div class="fine">two wallet prompts the first time: 1) allow ${SYM} · 2) toss</div>` : ""}
-      <div class="fine">balance ${fmt(S.balance)} ${SYM} · ${short(S.account)}${sender ? " · sent by <b>" + sender + "</b>" : ""} · <button class="chip mini" data-act="disconnect" type="button">DISCONNECT</button> <button class="chip mini" data-act="switch" type="button">SWITCH WALLET</button></div>${badCode}
+      <div class="fine">balance ${fmt(S.balance)} ${SYM} · ${short(S.account)}${sender && !senderOpen() ? " · sent by <b>" + sender + "</b>" + senderNote : ""} · <button class="chip mini" data-act="disconnect" type="button">DISCONNECT</button> <button class="chip mini" data-act="switch" type="button">SWITCH WALLET</button></div>${senderOpen() ? "" : badCode}
       <div class="lab" style="margin-top:6px">YOURS TO CLAIM</div>
       <div class="claims">
         <span>dividends <b>${fmt(S.claimable)}</b></span><button class="chip" data-act="claimdiv" type="button" ${S.claimable > 0n ? "" : "disabled"}>CLAIM</button>
         ${S.refOwed > 0n ? `<span>referrals <b>${fmt(S.refOwed)}</b></span><button class="chip" data-act="claimref" type="button">CLAIM</button>` : ""}
         ${S.claimable > 0n && S.refOwed > 0n ? `<button class="chip" data-act="claimall" type="button">CLAIM ALL</button>` : ""}
-      </div>
-      ${S.referrer === ZERO && !codeKnown && !(me && me.deposited > 0n) ? `<div class="amt" style="margin-top:6px"><span class="dim" style="white-space:nowrap">sent by:</span><input type="text" id="op-ref" placeholder="name · optional" value="" autocapitalize="off" spellcheck="false" autocomplete="off"></div>
-      <details id="op-refwhy" ${keep.refOpen ? "open" : ""}><summary class="fine">what is this?</summary><div class="fine">if a player sent you, their name goes here (filled in when you arrive through their link). Fixed on your first toss; it pays them ${T.refBps / 100}% of your tosses, never out of your share.</div></details>` : ""}`;
+      </div>`;
     }
     const desk = `<div class="cab"><div class="scr"><div class="lab">TOSS IN</div><div class="desk">${deskBody}</div></div></div>`;
 
-    const ref = S.account && !S.fatal ? `<div class="cab ref"><div class="scr"><div class="lab">YOUR LINK</div>
-      ${S.code ? `<div class="link"><code>${esc(pageLink())}?ref=${esc(S.code)}</code><button class="chip" data-act="copy" type="button">COPY</button></div>
-      <div class="share"><a class="chip" href="${xIntent(S.code)}" target="_blank" rel="noopener">POST ON X</a><a class="chip" href="${tgIntent(S.code)}" target="_blank" rel="noopener">SHARE ON TELEGRAM</a></div>
-      <div class="fine">${T.refBps / 100}% of every toss from anyone who arrives through it, for life · never out of their share</div>`
-      : `<div class="fine">pick a name once, then share your link or the name. Whoever arrives through it has you as their sender from their first toss on: ${T.refBps / 100}% of every toss they ever make comes to you, claimable any time.</div><div class="set"><input type="text" id="op-code" maxlength="20" placeholder="yourname" autocapitalize="off" spellcheck="false" autocomplete="off"><button class="chip" data-act="setcode" type="button">SET</button></div>`}
+    const nn = nameNote(String(keep.code || "").trim().toLowerCase(), S.nameCheck);
+    const ref = S.account && !S.fatal ? `<div class="cab ref"><div class="scr"><div class="lab">${S.code ? "YOUR LINK" : "GET MY LINK"}</div>
+      ${S.code ? `<div class="link"><code class="lnk">${esc(refLink(S.code))}</code><button class="chip" data-act="copy" type="button">COPY LINK</button></div>
+      <div class="link"><span class="dim">code</span><code class="big">${esc(S.code)}</code><button class="chip" data-act="copycode" type="button">COPY CODE</button></div>
+      <div class="share">${window.__POOL_CARD ? `<button class="go" data-act="card" type="button">MAKE MY CARD · POST ON X</button>` : `<a class="chip" href="${xIntent(S.code)}" target="_blank" rel="noopener">POST ON X</a>`}<a class="chip" href="${tgIntent(S.code)}" target="_blank" rel="noopener">SHARE ON TELEGRAM</a></div>
+      <div class="fine">${T.refBps / 100}% of every toss from anyone who opens the link or types the code, for life · never out of their share</div>`
+      : `<div class="fine">pick a name once — one transaction — and your link and code are yours for life: ${T.refBps / 100}% of every toss from whoever arrives through them, claimable any time.</div>
+      <div class="set"><input type="text" id="op-code" maxlength="20" placeholder="yourname" autocapitalize="off" spellcheck="false" autocomplete="off"><button class="chip" data-act="setcode" type="button">GET MY LINK</button></div>
+      <div class="${nn.cls}" id="op-namenote">${nn.html}</div>`}
     </div></div>` : "";
 
     const ranked = S.players.slice().sort((a, b) => (b.v.deposited > a.v.deposited ? 1 : b.v.deposited < a.v.deposited ? -1 : 0)).slice(0, 10);
@@ -734,7 +852,24 @@
     if (act === "claimref") return claimReferral();
     if (act === "claimall") return (async () => { await claimDividends(); await claimReferral(); })();
     if (act === "setcode") { const i = document.getElementById("op-code"); return setCode(i && i.value); }
-    if (act === "copy") { const c = host.querySelector(".ref code"); if (c && navigator.clipboard) navigator.clipboard.writeText(c.textContent).then(() => toast("copied", true)); return; }
+    if (act === "copy") { const c = host.querySelector(".ref code.lnk"); if (c && navigator.clipboard) navigator.clipboard.writeText(c.textContent).then(() => toast("link copied", true)); return; }
+    if (act === "copycode") { if (S.code && navigator.clipboard) navigator.clipboard.writeText(S.code).then(() => toast("code copied", true)); return; }
+    if (act === "card") {
+      const r = S.cur;
+      const inToday = !!(S.me && S.me.deposited > 0n);
+      const lastDrawn = S.history.find((h) => h.state === 2 && h.playerCount > 0);
+      const date = S.closesAt ? new Date(S.closesAt * 1000).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" }) : "";
+      window.__POOL_CARD.open(Object.assign(cardBranch(), { code: S.code, link: refLink(S.code), pot: r ? fmt(r.pot) : "today's", players: r ? r.playerCount : 0, lastPaid: lastDrawn ? fmt(lastDrawn.refundPaid + lastDrawn.jackpotPaid) : "", bell: S.closesAt ? nyTime(S.closesAt) : "4:00 PM", date, inToday, postText: postText(S.code) }));
+      return;
+    }
+    if (act === "wincard") {
+      const h = S.history.find((x) => x.id === Number(b.dataset.id));
+      if (!h || !window.__POOL_CARD) return;
+      const winner = h.jackpotWinner !== ZERO ? h.jackpotWinner : h.refundWinner;
+      const text = String(COPY.resultPost || `the croak: {paid} {sym} paid out of the pond, drawn by drand and checked on-chain. tomorrow's pond is open.\n\n{link}`).replace("{paid}", fmt(h.jackpotPaid + h.refundPaid)).replace(/\{sym\}/g, SYM).replace("{link}", pageLink());
+      window.__POOL_CARD.open(Object.assign(cardBranch(), { kind: "winner", link: pageLink(), pot: fmt(h.pot > 0n ? h.pot : h.jackpotPaid + h.refundPaid), players: h.playerCount, winner, winnerCode: same(winner, S.account) ? S.code : "", refundWinner: h.refundWinner, refundPaid: fmt(h.refundPaid), beaconRound: h.beaconRound, bell: nyTime(h.closesAt), date: new Date(h.closesAt * 1000).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" }), postText: text, code: "result" }));
+      return;
+    }
     if (act === "bell") return ringBell(Number(b.dataset.id));
   }
 
@@ -750,11 +885,12 @@
     // remember who sent you, for your first chip-in
     try { const c = new URL(location.href).searchParams.get("ref"); if (c && validCode(c.toLowerCase())) localStorage.setItem(REF_KEY, c.toLowerCase()); } catch (e) {}
     host.addEventListener("click", onClick);
+    host.addEventListener("input", onInput);
     render();
     refresh();
     clearInterval(ticker);
     ticker = setInterval(() => { const cd = host.querySelector(".board .cd"); if (cd && S.closesAt) { const left = S.closesAt - (Math.floor(Date.now() / 1000) - S.skew); cd.textContent = countdown(left); cd.classList.toggle("hot", left > 0 && left <= HOT_WINDOW); } }, 1000);
   }
 
-  window.__POOL = { page, decodeRound, decodePlayer, decodePlayers, decodeDeposits, parseAmount, fmt, fmtExact, bytes32, fromBytes32, decodeString };
+  window.__POOL = { page, parseRef, _S: S, decodeRound, decodePlayer, decodePlayers, decodeDeposits, parseAmount, fmt, fmtExact, bytes32, fromBytes32, decodeString };
 })();
