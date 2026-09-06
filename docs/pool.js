@@ -258,7 +258,7 @@
     account: null, cur: null, curId: 0, closesAt: 0, delay: 300, skew: 0, count: 0, roundCount: 0,
     players: [], feed: [], history: [], due: [], me: null, claimable: 0n, refOwed: 0n, code: "", referrer: ZERO,
     knobs: null, refOwner: ZERO, potShown: 0n, seenDeposits: 0, balance: 0n, allowance: 0n,
-    fatal: "", loaded: false, busy: false, pickWallet: null,
+    fatal: "", loaded: false, busy: false, pickWallet: null, wrongChain: false,
   };
 
   // ---------------------------------------------------------------- chain
@@ -330,11 +330,27 @@
   const terms = () => S.cur || S.knobs || { minDeposit: 0n, divBps: 2500, refBps: 500, houseBps: 1000, boostBps: 0, boostCapBps: 10000 };
 
   // ---------------------------------------------------------------- wallet flow
-  async function connect(chosen) {
+  /// forget the remembered wallet: back to CONNECT WALLET (the wallet's own permission is revoked when it lets us)
+  async function disconnect() {
+    const p = provider();
+    try { localStorage.removeItem(WALLET_KEY); } catch (e) {}
+    chosenProvider = null; S.account = null; S.me = null; S.pickWallet = null; S.wrongChain = false;
+    S.claimable = 0n; S.refOwed = 0n; S.code = ""; S.referrer = ZERO; S.balance = 0n; S.allowance = 0n;
+    render();
+    if (p && p.request) { try { await p.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }); } catch (e) { /* not every wallet has it */ } }
+    toast("disconnected", true);
+  }
+  /// forget the remembered wallet and start over: the picker shows again when more than one wallet is installed
+  async function switchWallet() {
+    try { localStorage.removeItem(WALLET_KEY); } catch (e) {}
+    chosenProvider = null; S.account = null; S.me = null; S.pickWallet = null; S.wrongChain = false;
+    return connect(null, true).catch((err) => toast(humanError(err), false));
+  }
+  async function connect(chosen, forcePick) {
     const list = wallets();
-    if (!chosenProvider || chosen) {
+    if (!chosenProvider || chosen || forcePick) {
       let remembered = null;
-      try { remembered = localStorage.getItem(WALLET_KEY); } catch (e) {}
+      try { remembered = forcePick ? null : localStorage.getItem(WALLET_KEY); } catch (e) {}
       const saved = chosen || (remembered && list.find((x) => x.info.rdns === remembered));
       if (!saved && list.length > 1) { S.pickWallet = list; render(); toast("this browser has more than one wallet — pick the one to chip in with"); return; }
       const pick = saved || list[0];
@@ -344,11 +360,19 @@
     }
     const p = provider();
     const accounts = await p.request({ method: "eth_requestAccounts" });
-    S.account = accounts[0];
     try { await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CFG.chainHex }] }); }
     catch (e) {
-      if (e && e.code === 4902) await p.request({ method: "wallet_addEthereumChain", params: [{ chainId: CFG.chainHex, chainName: CFG.chainName, rpcUrls: [RPCS[0]], nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, blockExplorerUrls: CFG.explorer ? [CFG.explorer] : undefined }] });
+      try { if (e && e.code === 4902) await p.request({ method: "wallet_addEthereumChain", params: [{ chainId: CFG.chainHex, chainName: CFG.chainName, rpcUrls: [RPCS[0]], nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, blockExplorerUrls: CFG.explorer ? [CFG.explorer] : undefined }] }); } catch (e2) { /* judged by eth_chainId below */ }
     }
+    // a wallet that cannot be on this chain (Phantom, 2026-09-06) must never look connected: its signature would fail on the chainId
+    let cid = null;
+    try { cid = String(await p.request({ method: "eth_chainId" })).toLowerCase(); } catch (e) {}
+    if (cid !== String(CFG.chainHex).toLowerCase()) {
+      S.account = null; S.me = null; S.wrongChain = true; render();
+      return toast(`this wallet cannot switch to ${CFG.chainName || "the chain"} — try MetaMask (SWITCH WALLET)`, false);
+    }
+    S.wrongChain = false;
+    S.account = accounts[0];
     if (p.on && !p.__poolListening) { // once per provider: a re-pick must not stack listeners
       p.__poolListening = true;
       p.on("accountsChanged", (a) => { S.account = a[0] || null; S.me = null; refresh(); });
@@ -588,7 +612,9 @@
       deskBody = `<div class="err">${S.fatal}</div>`;
     } else if (!S.account) {
       deskBody = S.pickWallet
-        ? `<div class="lab">WHICH WALLET?</div><div class="wallets">${S.pickWallet.map((x, i) => `<button class="go" data-act="wallet" data-i="${i}" type="button">${esc(COPY.connect || "CONNECT")} · ${esc(x.info.name).toUpperCase()}</button>`).join("")}</div><div class="fine">this browser has more than one wallet</div>`
+        ? `<div class="lab">WHICH WALLET?</div><div class="wallets">${S.pickWallet.map((x, i) => `<button class="go" data-act="wallet" data-i="${i}" type="button">${esc(COPY.connect || "CONNECT")} · ${esc(x.info.name).toUpperCase()}</button>`).join("")}</div><div class="fine">this browser has more than one wallet · the one you pick is remembered here until you <button class="chip" data-act="switch" type="button">SWITCH WALLET</button></div>`
+        : S.wrongChain
+        ? `<div class="need">that wallet cannot switch to ${esc(CFG.chainName || "this chain")} — MetaMask (or any wallet with ${esc(CFG.chainName || "the chain")} added) works</div><div class="claims"><button class="go" data-act="switch" type="button">SWITCH WALLET</button></div>`
         : `<button class="go" data-act="connect" type="button">${esc(COPY.connect || "CONNECT WALLET")}</button><div class="fine">connect a wallet on ${esc(CFG.chainName || "the chain")} to chip in, claim, or ring the bell${sender ? ` · sent by <b>${sender}</b>` : ""}</div>${badCode}`;
     } else {
       const presets = (CFG.presets || []).map((n) => `<button class="chip" data-act="preset" data-n="${n}" type="button">${n >= 1e6 ? (n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 }) + "M" : n >= 1000 ? (n / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "k" : n.toLocaleString("en-US")}</button>`).join("");
@@ -599,7 +625,7 @@
       <div class="presets"><button class="chip" data-act="min" type="button">MIN</button>${presets}<button class="chip" data-act="max" type="button">MAX</button></div>
       <button class="go" data-act="chip" type="button" ${left > 0 && !poor ? "" : "disabled"}>${left > 0 ? (me && me.deposited > 0n ? "CHIP IN MORE" : "CHIP IN") : "CLOSED — NEXT POOL AT THE BELL"}</button>
       ${firstTime && !poor ? `<div class="fine">two wallet prompts the first time: 1) allow ${SYM} · 2) chip in</div>` : ""}
-      <div class="fine">balance ${fmt(S.balance)} ${SYM} · ${short(S.account)}${sender ? " · sent by <b>" + sender + "</b>" : ""}</div>${badCode}
+      <div class="fine">balance ${fmt(S.balance)} ${SYM} · ${short(S.account)}${sender ? " · sent by <b>" + sender + "</b>" : ""} · <button class="chip mini" data-act="disconnect" type="button">DISCONNECT</button> <button class="chip mini" data-act="switch" type="button">SWITCH WALLET</button></div>${badCode}
       <div class="lab" style="margin-top:6px">YOURS TO CLAIM</div>
       <div class="claims">
         <span>dividends <b>${fmt(S.claimable)}</b></span><button class="chip" data-act="claimdiv" type="button" ${S.claimable > 0n ? "" : "disabled"}>CLAIM</button>
@@ -672,6 +698,8 @@
     if (act === "min") { if (amt()) amt().value = fmtExact(terms().minDeposit); return; }
     if (act === "max") { if (amt()) amt().value = fmtExact(S.balance); return; }
     if (act === "preset") { if (amt()) amt().value = Number(b.dataset.n).toLocaleString("en-US"); return; }
+    if (act === "switch") return switchWallet();
+    if (act === "disconnect") return disconnect();
     if (act === "wallet") { const wl = S.pickWallet && S.pickWallet[Number(b.dataset.i)]; if (wl) connect(wl).catch((err) => toast(humanError(err), false)); return; }
     if (act === "chip") {
       if (S.closesAt && Math.floor(Date.now() / 1000) - S.skew >= S.closesAt) { refresh(); return toast("closed — the next pool opens at the bell", false); }

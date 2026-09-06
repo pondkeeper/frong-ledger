@@ -119,12 +119,15 @@ async function open(label, width, height, fx, cfgPatch, opts = {}) {
       if (method === 'eth_chainId') return '0x1237';
       if (method === 'wallet_switchEthereumChain') return null;
       if (method === 'eth_sendTransaction') { (window.__SENT = window.__SENT || []).push(params[0]); return '0x' + '11'.repeat(32); }
+      if (method === 'wallet_revokePermissions') { window.__REVOKED = (window.__REVOKED || 0) + 1; return null; }
       return post(method, params);
     }, on() {}, removeListener() {} };
     const info = { uuid: 'mock-0001-0000-0000-000000000000', name: 'Mock', icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>', rdns: 'mock.wallet' };
     const announce = () => window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: Object.freeze({ info, provider }) }));
     window.addEventListener('eip6963:requestProvider', announce); announce();
-    if (TWO) { const info2 = { uuid: 'mock-0002-0000-0000-000000000000', name: 'Rabby', icon: info.icon, rdns: 'mock.rabby' }; const a2 = () => window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: Object.freeze({ info: info2, provider }) })); window.addEventListener('eip6963:requestProvider', a2); a2(); }
+    if (TWO) { // a Phantom-like second wallet: on chain 0x1, refuses to switch, cannot add the chain
+      const phantom = { ...provider, request: async ({ method, params }) => { if (method === 'eth_chainId') return '0x1'; if (method === 'wallet_switchEthereumChain') { const e = new Error('unrecognized chain'); e.code = 4902; throw e; } if (method === 'wallet_addEthereumChain') { const e = new Error('not supported'); e.code = 4001; throw e; } return provider.request({ method, params }); } };
+      const info2 = { uuid: 'mock-0002-0000-0000-000000000000', name: 'Phantom', icon: info.icon, rdns: 'mock.phantom' }; const a2 = () => window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: Object.freeze({ info: info2, provider: phantom }) })); window.addEventListener('eip6963:requestProvider', a2); a2(); }
   }, { ME, TWO: !!opts.two });
   await page.route('**/pool-config.js*', async (route) => {
     const res = await fetch(`http://localhost:${PORT}/pool-config.js`);
@@ -244,9 +247,29 @@ try {
       await page.locator('[data-act=connect]').click();
       await page.waitForTimeout(800);
       const choices = await page.$$eval('.go[data-act=wallet]', (bs) => bs.map((b) => b.textContent));
-      ok('two wallets: CONNECT offers one big button per wallet', choices.length === 2 && /MOCK/.test(choices[0]) && /RABBY/.test(choices[1]), choices.join(' | '));
+      ok('two wallets: CONNECT offers one big button per wallet', choices.length === 2 && /MOCK/.test(choices[0]) && /PHANTOM/.test(choices[1]), choices.join(' | '));
+      // the wallet that cannot be on Robinhood Chain never looks connected: the desk says so and offers SWITCH WALLET
+      await page.locator('.go[data-act=wallet]').nth(1).click();
+      await page.waitForTimeout(1500);
+      const t4 = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+      ok('a wallet stuck on another chain: no balance line, a plain reason, SWITCH WALLET offered', !/balance 100k/.test(t4) && /cannot switch to Robinhood Chain/.test(t4) && !!(await page.$('[data-act=switch]')), (t4.match(/that wallet[^—]*—[^.]*/) || ['(none)'])[0]);
+      ok('…and the toast names MetaMask', /try MetaMask/.test(await page.evaluate(() => document.getElementById('op-toast').textContent)));
+      await page.locator('[data-act=switch]').click();
+      await page.waitForTimeout(800);
+      ok('SWITCH WALLET forgets the pick and shows the picker again', (await page.evaluate(() => localStorage.getItem('pool.wallet.v1'))) === null && (await page.$$('.go[data-act=wallet]')).length === 2);
       await page.locator('.go[data-act=wallet]').first().click();
-      ok('picking one connects', await (async () => { for (let i = 0; i < 20; i++) { if (/balance 100k FRONG/.test(await page.evaluate(() => document.body.innerText))) return true; await page.waitForTimeout(300); } return false; })());
+      ok('picking the right one connects', await (async () => { for (let i = 0; i < 20; i++) { if (/balance 100k FRONG/.test(await page.evaluate(() => document.body.innerText))) return true; await page.waitForTimeout(300); } return false; })());
+      ok('the remembered wallet is the picked one, and the desk carries SWITCH WALLET next to the balance', (await page.evaluate(() => localStorage.getItem('pool.wallet.v1'))) === 'mock.wallet' && !!(await page.$('.desk .chip.mini[data-act=switch]')));
+      await page.locator('.desk .chip.mini[data-act=switch]').click();
+      await page.waitForTimeout(800);
+      ok('connected → SWITCH WALLET: forgotten again, picker back', (await page.evaluate(() => localStorage.getItem('pool.wallet.v1'))) === null && (await page.$$('.go[data-act=wallet]')).length === 2);
+      await page.locator('.go[data-act=wallet]').first().click();
+      await page.waitForTimeout(1500);
+      await page.locator('.desk .chip.mini[data-act=disconnect]').click();
+      await page.waitForTimeout(800);
+      const t5 = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+      ok('DISCONNECT: back to CONNECT WALLET, nothing remembered, no balance line, no picker', /CONNECT WALLET/.test(t5) && !/balance 100k/.test(t5) && (await page.evaluate(() => localStorage.getItem('pool.wallet.v1'))) === null && (await page.$$('.go[data-act=wallet]')).length === 0, t5.match(/CHIP IN [^·]{0,60}/)?.[0]);
+      ok('DISCONNECT asked the wallet to revoke permissions (best effort)', (await page.evaluate(() => (window.__REVOKED || 0))) >= 1);
     }
     await page.close();
   }
