@@ -3,7 +3,7 @@
 // reads nothing from the URL. `pool` empty = the page says the pool has not
 // opened and does nothing else. index.html loads this too, for the hero line.
 window.POOL_CFG = {
-  pool: "",                                                   // OfficePool — filled at deploy
+  pool: "0x16f2D383e1C09d48568c882CD1B323B99f592842",        // OfficePool for FRONG — deployed 2026-09-06, block 55666061 (SeedBox 0x3A4e…F612)
   token: "0x6245e67affA44a23077f0Ea7f981a8DC743a0c47",        // FRONG (verified: symbol FRONG, 18 decimals, supply 1e27)
   symbol: "FRONG",
   decimals: 18,                                               // asserted against decimals() on the chain; a mismatch disables the desk

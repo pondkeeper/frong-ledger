@@ -4,7 +4,7 @@ compatibility_date = "2025-08-01"
 
 # public site allowed to call the API (comma-separated). Local dev overrides via .dev.vars
 [vars]
-ALLOWED_ORIGINS = "https://pondkeeper.github.io"
+ALLOWED_ORIGINS = "https://www.frong.io,https://frong.io,https://pondkeeper.github.io"
 
 [[kv_namespaces]]
 binding = "MEMES"
