@@ -823,7 +823,7 @@ async function pollJackpot() {
     };
     const cr = await call('0x8a19c8bc'); // currentRound(): id, closesAt, open, nowTs
     const id = BigInt('0x' + cr.slice(2, 66)), open = BigInt('0x' + cr.slice(130, 194)) === 1n;
-    let line = 'opens with the first chip-in';
+    let line = 'opens with the first toss';
     if (open) {
       const rv = await call('0xdb5b4737' + id.toString(16).padStart(64, '0')); // roundView(id): pot is word 6
       const pot = BigInt('0x' + rv.slice(2 + 6 * 64, 2 + 7 * 64));

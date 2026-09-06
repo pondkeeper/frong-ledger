@@ -352,7 +352,7 @@
       let remembered = null;
       try { remembered = forcePick ? null : localStorage.getItem(WALLET_KEY); } catch (e) {}
       const saved = chosen || (remembered && list.find((x) => x.info.rdns === remembered));
-      if (!saved && list.length > 1) { S.pickWallet = list; render(); toast("this browser has more than one wallet — pick the one to chip in with"); return; }
+      if (!saved && list.length > 1) { S.pickWallet = list; render(); toast("this browser has more than one wallet — pick the one to toss with"); return; }
       const pick = saved || list[0];
       if (pick) { chosenProvider = pick.provider; try { localStorage.setItem(WALLET_KEY, pick.info.rdns); } catch (e) {} }
       else if (!provider()) return toast("no wallet in this browser. Open this page in your wallet app", false);
@@ -413,7 +413,7 @@
     if (landed) {
       // a burst of re-reads covers a replica still behind, or a wallet-side receipt our rpc has not seen
       const changed = () => S.count !== countBefore || S.claimable !== claimBefore || S.code !== codeBefore;
-      if (!changed()) toast("landed — the board catches up in a moment", true);
+      if (!changed()) toast("landed — the pond catches up in a moment", true);
       for (const ms of [2000, 5000, 10000]) setTimeout(() => { if (!S.busy) refresh(); }, ms);
     }
   }
@@ -421,11 +421,11 @@
     const m = String((e && (e.shortMessage || e.message)) || e || "");
     if (/reject|denied|cancel/i.test(m)) return "cancelled in the wallet";
     // wallets surface revert DATA more often than error names: match both
-    if (/BadAmount|0x749b5939/.test(m)) return "below the minimum for this round, or not a whole amount";
+    if (/BadAmount|0x749b5939/.test(m)) return "below the minimum for this pond, or not a whole amount";
     if (/BadBroker|0xef6303e2/.test(m)) return "one of those brokers is not yours, not hired, or already counted today";
-    if (/RoundNotClosed|0x29e3b953/.test(m)) return "the bell has not rung yet";
+    if (/RoundNotClosed|0x29e3b953/.test(m)) return "the croak has not come yet";
     if (/RoundNotOpen|0x402bc007/.test(m)) return "that round is already settled";
-    if (/NotAPlayer|0xabca3517/.test(m)) return "chip in first";
+    if (/NotAPlayer|0xabca3517/.test(m)) return "toss a frong in first";
     if (/CodeTaken|0x6af0cefe/.test(m)) return "that name is taken, or you already have one";
     if (/BadCode|0x6c4ae96c/.test(m)) return "3 to 20 lowercase letters or digits";
     if (/NothingToClaim|0x969bf728/.test(m)) return "nothing to claim";
@@ -433,7 +433,7 @@
     if (/BadBeacon|0x50264bfe|bad beacon/i.test(m)) return "that is not the round's beacon";
     if (/TransferFailed|0x90b8ec18/.test(m)) return "the token transfer failed";
     // the token's own reverts (solady): InsufficientAllowance / InsufficientBalance — not a gas problem
-    if (/InsufficientAllowance|0x13be252b|insufficient allowance|exceeds allowance/i.test(m)) return `the pool is not allowed to take that much ${SYM} yet — try again in a moment`;
+    if (/InsufficientAllowance|0x13be252b|insufficient allowance|exceeds allowance/i.test(m)) return `the pond is not allowed to take that much ${SYM} yet — try again in a moment`;
     if (/InsufficientBalance|0xf4d678b8|insufficient balance|exceeds balance/i.test(m)) return "that is more than you have";
     if (/insufficient/i.test(m)) return "not enough ETH for gas";
     return m.length > 160 ? m.slice(0, 160) + "…" : m || "something went wrong";
@@ -456,9 +456,9 @@
       // two confirmations the first time: the allowance, then the chip-in. Say so, and go
       // straight on to the chip-in once the allowance has landed (the allowance re-read after
       // the block can lag a beat, and a silent stop here reads as "nothing happened").
-      toast(`first time: two confirmations — allow the pool to take ${SYM}, then the chip-in`);
+      toast(`first time: two confirmations — allow the pond to take ${SYM}, then the toss`);
       let landed = false;
-      await tx(`allowing the pool to take ${SYM}`, () => send(CFG.token, SEL.approve + word(P) + word((1n << 256n) - 1n), S.account), async () => { landed = true; });
+      await tx(`allowing the pond to take ${SYM}`, () => send(CFG.token, SEL.approve + word(P) + word((1n << 256n) - 1n), S.account), async () => { landed = true; });
       if (!landed) return; // rejected or failed: the toast said so
     }
     // an honest limit: the estimate is real (deposit() has no internal try/catch), +25%.
@@ -469,7 +469,7 @@
       const est = await estimateGas(S.account, P, data);
       if (est != null) { const g = (est * 125n) / 100n; if (g > 150000n && g < fallback * 2n) limit = g; }
     } catch (e) { /* the node could not estimate (an allowance that has not propagated yet, most likely): the ceiling stands */ }
-    await tx("chipping in", () => send(P, data, S.account, limit), async () => { toast("you're in — see you at the bell", true); });
+    await tx("tossing", () => send(P, data, S.account, limit), async () => { toast("you're in — see you at the croak", true); });
   }
   async function claimDividends() {
     const ids = decodeUintArray((await callBatch([{ to: CFG.pool, data: SEL.roundsOf + word(S.account) }]))[0]);
@@ -510,7 +510,7 @@
     }
     const sigHex = sig || "";
     const data = SEL.draw + word(id) + word(64) + word(sigHex.length / 2) + (sigHex ? sigHex.padEnd(128, "0") : "");
-    await tx("ringing the bell", () => send(CFG.pool, data, S.account, 900000n));
+    await tx("making it croak", () => send(CFG.pool, data, S.account, 900000n));
   }
 
   // ---------------------------------------------------------------- render
@@ -545,7 +545,7 @@
     const link = `${pageLink()}?ref=${code}`;
     const r = S.cur;
     const jackpot = r ? fmt(r.pot) : "today's";
-    return String(COPY.post || `chip in ${SYM} before the ${CFG.bell || "4 PM New York"} bell: one takes the jackpot, one gets their money back.\n\n{link}`).replace("{link}", link).replace("{jackpot}", jackpot);
+    return String(COPY.post || `toss ${SYM} in the pond before the ${CFG.bell || "4 PM New York"} croak: one takes the pond, one gets their frongs back.\n\n{link}`).replace("{link}", link).replace("{jackpot}", jackpot);
   }
   const xIntent = (code) => "https://x.com/intent/post?text=" + encodeURIComponent(postText(code));
   const tgIntent = (code) => "https://t.me/share/url?url=" + encodeURIComponent(`${pageLink()}?ref=${code}`) + "&text=" + encodeURIComponent(postText(code).replace(/\n*\{?https?:\/\/\S+\s*$/, "").replace(pageLink() + `?ref=${code}`, "").trim());
@@ -575,7 +575,7 @@
     const buyHref = CFG.buyUrl || null;
     const codeKnown = !!refCode() && S.refOwner !== ZERO;
     const sender = S.referrer !== ZERO ? short(S.referrer) : codeKnown ? esc(refCode()) : "";
-    const badCode = refCode() && !codeKnown && S.loaded ? `<div class="fine">link code '${esc(refCode())}' is not registered · their ${T.refBps / 100}% would go to the jackpot</div>` : "";
+    const badCode = refCode() && !codeKnown && S.loaded ? `<div class="fine">link code '${esc(refCode())}' is not registered · their ${T.refBps / 100}% would go to the pond</div>` : "";
     const usdLine = (units) => usd(units);
 
     // ---- the results banner: from the draw until the next bell
@@ -583,11 +583,11 @@
     let banner = "";
     if (last) {
       const who = (a) => (youWon(a) ? `<b class="won">YOU</b>` : `<b>${short(a)}</b>`);
-      banner = `<div class="last">🔔 ${now - last.closesAt < 12 * 3600 ? "today" : "yesterday"}: ${last.jackpotWinner !== ZERO ? `jackpot ${fmt(last.jackpotPaid)} → ${who(last.jackpotWinner)} · ` : ""}money back ${fmt(last.refundPaid)} → ${who(last.refundWinner)}`;
+      banner = `<div class="last">🔔 ${now - last.closesAt < 12 * 3600 ? "today" : "yesterday"}: ${last.jackpotWinner !== ZERO ? `pond ${fmt(last.jackpotPaid)} → ${who(last.jackpotWinner)} · ` : ""}frongs back ${fmt(last.refundPaid)} → ${who(last.refundWinner)}`;
       if (S.account) {
         const mine = [];
-        if (youWon(last.jackpotWinner)) mine.push(`<b class="won">YOU took the jackpot: ${fmt(last.jackpotPaid)} ${SYM}</b>`);
-        if (youWon(last.refundWinner)) mine.push(`<b class="won">YOU got your money back: ${fmt(last.refundPaid)} ${SYM}</b>`);
+        if (youWon(last.jackpotWinner)) mine.push(`<b class="won">YOU took the pond: ${fmt(last.jackpotPaid)} ${SYM}</b>`);
+        if (youWon(last.refundWinner)) mine.push(`<b class="won">YOU got your frongs back: ${fmt(last.refundPaid)} ${SYM}</b>`);
         if (S.claimable > 0n) mine.push(`you have ${fmt(S.claimable)} in dividends to claim → <button class="chip" data-act="claimdiv" type="button">CLAIM</button>`);
         if (mine.length) banner += `<div class="mine">${mine.join(" · ")}</div>`;
       }
@@ -596,23 +596,23 @@
 
     // ---- the winners tape: earns its place once there is history to roll
     const tickerItems = [];
-    if (r && r.pot > 0n) tickerItems.push(`<span class="up">TODAY'S JACKPOT ${fmt(r.pot)} ${SYM}</span> · closes ${bellNY} NY`);
+    if (r && r.pot > 0n) tickerItems.push(`<span class="up">TODAY'S POND ${fmt(r.pot)} ${SYM}</span> · croaks ${bellNY} NY`);
     for (const h of S.history.filter((x) => x.state === 2 && x.playerCount > 0).slice(0, 6)) {
-      tickerItems.push(h.jackpotWinner !== ZERO ? `${nyTime(h.closesAt, true)} · jackpot <span class="up">${fmt(h.jackpotPaid)}</span> → ${short(h.jackpotWinner)}` : `${nyTime(h.closesAt, true)} · money back ${fmt(h.refundPaid)} → ${short(h.refundWinner)}`);
+      tickerItems.push(h.jackpotWinner !== ZERO ? `${nyTime(h.closesAt, true)} · pond <span class="up">${fmt(h.jackpotPaid)}</span> → ${short(h.jackpotWinner)}` : `${nyTime(h.closesAt, true)} · frongs back ${fmt(h.refundPaid)} → ${short(h.refundWinner)}`);
     }
     const tape = tickerItems.join(" &nbsp;&nbsp;·&nbsp;&nbsp; ") + " &nbsp;&nbsp;·&nbsp;&nbsp; ";
     const half = tape.repeat(Math.max(2, Math.ceil(2400 / Math.max(80, tape.replace(/<[^>]+>/g, "").length * 8))));
     const tickerHtml = tickerItems.length > 1 ? `<div class="op-ticker"><div class="tape">${half}${half}</div></div>` : "";
 
     const board = `<div class="cab board${me && me.deposited > 0n ? " in" : ""}"><div class="scr">${banner}<div class="hero">
-      <div class="lab">${r ? "TODAY'S JACKPOT" : "THE JACKPOT"}</div>
+      <div class="lab">${r ? "TODAY'S POND" : "THE POND"}</div>
       <div class="pot${left > 0 && left <= 600 ? " hot2" : left > 0 && left <= 3600 ? " hot1" : ""}" data-pot="${r ? r.pot.toString() : "0"}"><span class="num">${r ? fmt(S.potShown && S.potShown < r.pot ? S.potShown : r.pot) : "—"}</span>${r ? ` <span class="unit">${SYM}</span>` : ""}</div>
-      <div class="one">chip in ${SYM} before the ${bellNY} <span class="long">New York</span><span class="short">NY</span> bell · one takes the jackpot, one gets their money back<span class="long"> · ${T.divBps / 100}% of every chip-in is paid out to everyone already in</span></div>
-      <div class="fine">${r ? (r.playerCount === 0 && r.pot === 0n ? "the pool is open and nobody is in yet — the first chip-in today starts the jackpot" : [`${r.playerCount} player${r.playerCount === 1 ? "" : "s"}`, `${fmt(r.deposits)}&nbsp;in`, r.seed > 0n ? `${fmt(r.seed)} seeded` : "", usdLine(r.pot)].filter(Boolean).join(" · ")) : (S.loaded ? "nobody has chipped in yet today — the first one opens the pool" : "reading the chain…")}</div></div>
+      <div class="one">toss a frong in before the ${bellNY} <span class="long">New York</span><span class="short">NY</span> croak · one takes the pond, one gets their frongs back<span class="long"> · ${T.divBps / 100}% of every toss is paid out to everyone already in</span></div>
+      <div class="fine">${r ? (r.playerCount === 0 && r.pot === 0n ? "the pond is open and nobody is in yet — the first toss today starts it" : [`${r.playerCount} player${r.playerCount === 1 ? "" : "s"}`, `${fmt(r.deposits)}&nbsp;in`, r.seed > 0n ? `${fmt(r.seed)} seeded` : "", usdLine(r.pot)].filter(Boolean).join(" · ")) : (S.loaded ? "nobody has tossed a frong in yet today — the first one opens the pond" : "reading the chain…")}</div></div>
       <div class="row">
-        <div><div class="lab">${left > 0 ? "CLOSES IN" : "CLOSED"}</div><div class="cd${left > 0 && left <= HOT_WINDOW ? " hot" : ""}">${countdown(left)}</div><div class="fine">${S.closesAt ? `<span class="long">${nyTime(S.closesAt, true)} NY${localTime(S.closesAt)} · drawn ${Math.round(S.delay / 60)} min after the bell</span><span class="short">${nyTime(S.closesAt)} NY${localTime(S.closesAt, true)} · drawn +${Math.round(S.delay / 60)} min</span>` : ""}</div></div>
+        <div><div class="lab">${left > 0 ? "CROAKS IN" : "CROAKED"}</div><div class="cd${left > 0 && left <= HOT_WINDOW ? " hot" : ""}">${countdown(left)}</div><div class="fine">${S.closesAt ? `<span class="long">${nyTime(S.closesAt, true)} NY${localTime(S.closesAt)} · drawn ${Math.round(S.delay / 60)} min after the croak</span><span class="short">${nyTime(S.closesAt)} NY${localTime(S.closesAt, true)} · drawn +${Math.round(S.delay / 60)} min</span>` : ""}</div></div>
         ${me && me.deposited > 0n ? `<div><div class="lab">YOU TODAY</div><div class="hi">${fmt(me.deposited)} ${SYM}</div><div class="fine">${BOOST ? `${me.brokers} counted · ${multX(me.brokers)}` : (usdLine(me.deposited) || "&nbsp;")}</div></div>
-        <div><div class="lab">YOUR CHANCE AT THE JACKPOT</div><div class="hi">${odds ? "1 in " + odds : "—"}</div><div class="fine">${me.divEarned > 0n ? "earned " + fmt(me.divEarned) + " in dividends today" : "&nbsp;"}</div></div>` : ""}
+        <div><div class="lab">YOUR CHANCE AT THE POND</div><div class="hi">${odds ? "1 in " + odds : "—"}</div><div class="fine">${me.divEarned > 0n ? "earned " + fmt(me.divEarned) + " in dividends today" : "&nbsp;"}</div></div>` : ""}
       </div></div></div>`;
 
     // ---- the bell, for a closed pool nobody has drawn
@@ -620,8 +620,8 @@
     if (S.due.length) {
       const d = S.history.find((h) => h.id === S.due[0]);
       const when = d ? nyTime(d.closesAt, true) : "round " + S.due[0];
-      bell = `<div class="cab"><div class="scr"><div class="lab">THE BELL</div><div>${d && now - d.closesAt < 86400 ? "yesterday's" : "a"} pool (${when}) is waiting for its draw.</div>
-      <button class="go" data-act="bell" data-id="${S.due[0]}" ${S.account ? "" : "disabled"} type="button">RING THE BELL</button>
+      bell = `<div class="cab"><div class="scr"><div class="lab">THE CROAK</div><div>${d && now - d.closesAt < 86400 ? "yesterday's" : "a"} pond (${when}) is waiting for its draw.</div>
+      <button class="go" data-act="bell" data-id="${S.due[0]}" ${S.account ? "" : "disabled"} type="button">MAKE IT CROAK</button>
       <div class="fine">fetches the beacon and hands it to the contract · anyone may${S.account ? "" : " · connect a wallet first"}</div></div></div>`;
     }
 
@@ -636,16 +636,16 @@
         ? `<div class="lab">WHICH WALLET?</div><div class="wallets">${S.pickWallet.map((x, i) => `<button class="go" data-act="wallet" data-i="${i}" type="button">${esc(COPY.connect || "CONNECT")} · ${esc(x.info.name).toUpperCase()}</button>`).join("")}</div><div class="fine">this browser has more than one wallet · the one you pick is remembered here until you <button class="chip" data-act="switch" type="button">SWITCH WALLET</button></div>`
         : S.wrongChain
         ? `<div class="need">that wallet cannot switch to ${esc(CFG.chainName || "this chain")} — MetaMask (or any wallet with ${esc(CFG.chainName || "the chain")} added) works</div><div class="claims"><button class="go" data-act="switch" type="button">SWITCH WALLET</button></div>`
-        : `<button class="go" data-act="connect" type="button">${esc(COPY.connect || "CONNECT WALLET")}</button><div class="fine">connect a wallet on ${esc(CFG.chainName || "the chain")} to chip in, claim, or ring the bell${sender ? ` · sent by <b>${sender}</b>` : ""}</div>${badCode}`;
+        : `<button class="go" data-act="connect" type="button">${esc(COPY.connect || "CONNECT WALLET")}</button><div class="fine">connect a wallet on ${esc(CFG.chainName || "the chain")} to toss, claim, or make it croak${sender ? ` · sent by <b>${sender}</b>` : ""}</div>${badCode}`;
     } else {
       const presets = (CFG.presets || []).map((n) => `<button class="chip" data-act="preset" data-n="${n}" type="button">${n >= 1e6 ? (n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 }) + "M" : n >= 1000 ? (n / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "k" : n.toLocaleString("en-US")}</button>`).join("");
       deskBody = `
       ${me && me.deposited > 0n ? `<div class="hi inline">you're in with ${fmt(me.deposited)} · ${odds ? "1 in " + odds : "—"}</div>` : ""}
-      ${poor ? `<div class="need">you need at least ${fmt(T.minDeposit)} ${SYM} to chip in${buyHref ? ` · <a href="${esc(buyHref)}" target="_blank" rel="noopener">get ${SYM} →</a>` : ""}</div>` : ""}
+      ${poor ? `<div class="need">you need at least ${fmt(T.minDeposit)} ${SYM} to toss${buyHref ? ` · <a href="${esc(buyHref)}" target="_blank" rel="noopener">get ${SYM} →</a>` : ""}</div>` : ""}
       <div class="amt"><input type="text" inputmode="decimal" id="op-amt" placeholder="${fmtExact(T.minDeposit)} min" autocomplete="off"></div>
       <div class="presets"><button class="chip" data-act="min" type="button">MIN</button>${presets}<button class="chip" data-act="max" type="button">MAX</button></div>
-      <button class="go" data-act="chip" type="button" ${left > 0 && !poor ? "" : "disabled"}>${left > 0 ? (me && me.deposited > 0n ? "CHIP IN MORE" : "CHIP IN") : "CLOSED — NEXT POOL AT THE BELL"}</button>
-      ${firstTime && !poor ? `<div class="fine">two wallet prompts the first time: 1) allow ${SYM} · 2) chip in</div>` : ""}
+      <button class="go" data-act="chip" type="button" ${left > 0 && !poor ? "" : "disabled"}>${left > 0 ? (me && me.deposited > 0n ? "TOSS MORE" : "TOSS A FRONG") : "CROAKED — NEXT POND AT THE CROAK"}</button>
+      ${firstTime && !poor ? `<div class="fine">two wallet prompts the first time: 1) allow ${SYM} · 2) toss</div>` : ""}
       <div class="fine">balance ${fmt(S.balance)} ${SYM} · ${short(S.account)}${sender ? " · sent by <b>" + sender + "</b>" : ""} · <button class="chip mini" data-act="disconnect" type="button">DISCONNECT</button> <button class="chip mini" data-act="switch" type="button">SWITCH WALLET</button></div>${badCode}
       <div class="lab" style="margin-top:6px">YOURS TO CLAIM</div>
       <div class="claims">
@@ -654,39 +654,39 @@
         ${S.claimable > 0n && S.refOwed > 0n ? `<button class="chip" data-act="claimall" type="button">CLAIM ALL</button>` : ""}
       </div>
       ${S.referrer === ZERO && !codeKnown && !(me && me.deposited > 0n) ? `<div class="amt" style="margin-top:6px"><span class="dim" style="white-space:nowrap">sent by:</span><input type="text" id="op-ref" placeholder="name · optional" value="" autocapitalize="off" spellcheck="false" autocomplete="off"></div>
-      <details id="op-refwhy" ${keep.refOpen ? "open" : ""}><summary class="fine">what is this?</summary><div class="fine">if a player sent you, their name goes here (filled in when you arrive through their link). Fixed on your first chip-in; it pays them ${T.refBps / 100}% of your chip-ins, never out of your share.</div></details>` : ""}`;
+      <details id="op-refwhy" ${keep.refOpen ? "open" : ""}><summary class="fine">what is this?</summary><div class="fine">if a player sent you, their name goes here (filled in when you arrive through their link). Fixed on your first toss; it pays them ${T.refBps / 100}% of your tosses, never out of your share.</div></details>` : ""}`;
     }
-    const desk = `<div class="cab"><div class="scr"><div class="lab">CHIP IN</div><div class="desk">${deskBody}</div></div></div>`;
+    const desk = `<div class="cab"><div class="scr"><div class="lab">TOSS IN</div><div class="desk">${deskBody}</div></div></div>`;
 
     const ref = S.account && !S.fatal ? `<div class="cab ref"><div class="scr"><div class="lab">YOUR LINK</div>
       ${S.code ? `<div class="link"><code>${esc(pageLink())}?ref=${esc(S.code)}</code><button class="chip" data-act="copy" type="button">COPY</button></div>
       <div class="share"><a class="chip" href="${xIntent(S.code)}" target="_blank" rel="noopener">POST ON X</a><a class="chip" href="${tgIntent(S.code)}" target="_blank" rel="noopener">SHARE ON TELEGRAM</a></div>
-      <div class="fine">${T.refBps / 100}% of every chip-in from anyone who arrives through it, for life · never out of their share</div>`
-      : `<div class="fine">pick a name once, then share your link or the name. Whoever arrives through it has you as their sender from their first chip-in on: ${T.refBps / 100}% of every chip-in they ever make comes to you, claimable any time.</div><div class="set"><input type="text" id="op-code" maxlength="20" placeholder="yourname" autocapitalize="off" spellcheck="false" autocomplete="off"><button class="chip" data-act="setcode" type="button">SET</button></div>`}
+      <div class="fine">${T.refBps / 100}% of every toss from anyone who arrives through it, for life · never out of their share</div>`
+      : `<div class="fine">pick a name once, then share your link or the name. Whoever arrives through it has you as their sender from their first toss on: ${T.refBps / 100}% of every toss they ever make comes to you, claimable any time.</div><div class="set"><input type="text" id="op-code" maxlength="20" placeholder="yourname" autocapitalize="off" spellcheck="false" autocomplete="off"><button class="chip" data-act="setcode" type="button">SET</button></div>`}
     </div></div>` : "";
 
     const ranked = S.players.slice().sort((a, b) => (b.v.deposited > a.v.deposited ? 1 : b.v.deposited < a.v.deposited ? -1 : 0)).slice(0, 10);
-    const lead = `<div class="cab floor"><div class="scr"><div class="lab">TODAY'S BOARD</div>
-      <div class="grid3 head"><span>player${BOOST ? `<span class="long"> · counted</span>` : ""}</span><span>chipped in<span class="long"> · earned in dividends</span></span></div>
+    const lead = `<div class="cab floor"><div class="scr"><div class="lab">TODAY'S POND</div>
+      <div class="grid3 head"><span>player${BOOST ? `<span class="long"> · counted</span>` : ""}</span><span>tossed<span class="long"> · earned in dividends</span></span></div>
       <div class="list">${ranked.length ? ranked.map((p, i) =>
         `<div class="grid3${same(p.addr, S.account) ? " me" : ""}"><span class="who">${i + 1}. ${same(p.addr, S.account) ? "<b class='won'>YOU</b>" : `<a href="${explorer(p.addr)}" rel="noopener">${short(p.addr)}</a>`}${BOOST && p.v.brokers ? ` <span class="dim brk">+${p.v.brokers} · ${multX(p.v.brokers)}</span>` : ""}</span><span class="n">${fmt(p.v.deposited)}<span class="dim sub"><span class="dot"> · </span>earned ${fmt(p.v.divEarned)}</span></span></div>`).join("")
         : `<div class="dim">${S.loaded ? "nobody yet" : "loading…"}</div>`}</div>
       <div class="lab" style="margin-top:14px">JUST NOW</div>
-      <div class="list">${S.feed.length ? S.feed.map((d, i) => `<div class="r${same(d.player, S.account) ? " me" : ""}${S.seenDeposits && S.count - i > S.seenDeposits ? " new" : ""}"><span class="who">${same(d.player, S.account) ? "you" : short(d.player)} chipped in</span><span class="n">${fmt(d.amount)} <span class="dim">${ago(d.at)} ago</span></span></div>`).join("") : `<div class="dim">${S.loaded ? "quiet so far" : "loading…"}</div>`}</div></div></div>`;
+      <div class="list">${S.feed.length ? S.feed.map((d, i) => `<div class="r${same(d.player, S.account) ? " me" : ""}${S.seenDeposits && S.count - i > S.seenDeposits ? " new" : ""}"><span class="who">${same(d.player, S.account) ? "you" : short(d.player)} tossed</span><span class="n">${fmt(d.amount)} <span class="dim">${ago(d.at)} ago</span></span></div>`).join("") : `<div class="dim">${S.loaded ? "quiet so far" : "loading…"}</div>`}</div></div></div>`;
 
-    const hist = `<div class="cab hist"><div class="scr"><div class="lab">PAST POOLS</div>
+    const hist = `<div class="cab hist"><div class="scr"><div class="lab">PAST PONDS</div>
       <div class="list">${S.history.length ? S.history.map((h) => {
-        const st = h.state === 2 ? (h.playerCount === 0 ? "nobody came · carried" : "") : h.state === 3 ? "abandoned · refunds open" : "waiting for its draw";
+        const st = h.state === 2 ? (h.playerCount === 0 ? "nobody came · carried" : "") : h.state === 3 ? "abandoned · refunds open" : "waiting for its croak";
         const name = (a) => (youWon(a) ? `<b class="won">YOU</b>` : `<a href="${explorer(a)}" rel="noopener">${short(a)}</a>`);
         const drawn = h.state === 2 && h.playerCount > 0;
-        return `<div class="r${youWon(h.refundWinner) || youWon(h.jackpotWinner) ? " me" : ""}"><div class="line"><b>${nyTime(h.closesAt, true)}<span class="dim"> · ${h.playerCount} player${h.playerCount === 1 ? "" : "s"}</span></b>${drawn ? (h.jackpotWinner !== ZERO ? `<span>jackpot <b>${fmt(h.jackpotPaid)}</b> → ${name(h.jackpotWinner)}</span>` : `<span class="dim">the refund was the whole jackpot</span>`) : `<span>${fmt(h.pot)} ${SYM}</span>`}${st ? `<span class="dim">${st}</span>` : ""}</div>
-          ${drawn ? `<div class="line"><span>money back ${fmt(h.refundPaid)} → ${name(h.refundWinner)}</span><a class="dim" href="${drandUrl(h.beaconRound)}" rel="noopener">beacon ${h.beaconRound} ↗</a></div>` : ""}</div>`;
+        return `<div class="r${youWon(h.refundWinner) || youWon(h.jackpotWinner) ? " me" : ""}"><div class="line"><b>${nyTime(h.closesAt, true)}<span class="dim"> · ${h.playerCount} player${h.playerCount === 1 ? "" : "s"}</span></b>${drawn ? (h.jackpotWinner !== ZERO ? `<span>pond <b>${fmt(h.jackpotPaid)}</b> → ${name(h.jackpotWinner)}</span>` : `<span class="dim">the refund was the whole pond</span>`) : `<span>${fmt(h.pot)} ${SYM}</span>`}${st ? `<span class="dim">${st}</span>` : ""}</div>
+          ${drawn ? `<div class="line"><span>frongs back ${fmt(h.refundPaid)} → ${name(h.refundWinner)}</span><a class="dim" href="${drandUrl(h.beaconRound)}" rel="noopener">beacon ${h.beaconRound} ↗</a></div>` : ""}</div>`;
       }).join("") : `<div class="dim">${S.loaded ? "none yet" : "loading…"}</div>`}</div></div></div>`;
 
     const rules = `<div class="cab rules"><div class="lab">HOUSE RULES</div>
-      <p><b>1.</b> Chip in ${SYM} before the ${bellNY} New York bell${T.minDeposit > 0n ? ` (at least <b>${fmtExact(T.minDeposit)}</b> a time)` : ""}. <b>${T.divBps / 100}%</b> of every chip-in is paid out on the spot to everyone already in that day, pro-rata; <b>${T.refBps / 100}%</b> goes to whoever sent you.</p>
-      <p><b>2.</b> ${Math.round(S.delay / 60)} minutes after the bell, drand's public beacon picks two players: one takes the jackpot, one gets their money back${last ? "" : ""}. Your chance is what you chipped in${BOOST ? `, up to <b>${cap / 10000}×</b> with a boost` : ""}. A chip-in is final.</p>
-      <p><b>3.</b> The contract checks the beacon itself; nobody can pick or delay it. Every past pool links its beacon above. Fine print: <a href="${esc(COPY.rulesHref || "/methodology#pool")}">how the pool works</a>.</p></div>`;
+      <p><b>1.</b> Toss ${SYM} in before the ${bellNY} New York croak${T.minDeposit > 0n ? ` (at least <b>${fmtExact(T.minDeposit)}</b> a toss)` : ""}. <b>${T.divBps / 100}%</b> of every toss is paid out on the spot to everyone already in that day, pro-rata; <b>${T.refBps / 100}%</b> goes to whoever sent you.</p>
+      <p><b>2.</b> ${Math.round(S.delay / 60)} minutes after the croak, drand's public beacon picks two players: one takes the pond, one gets their frongs back. Your chance is what you tossed in${BOOST ? `, up to <b>${cap / 10000}×</b> with a boost` : ""}. A toss is final.</p>
+      <p><b>3.</b> The contract checks the beacon itself; nobody can pick or delay it. Every past pond links its beacon above. Fine print: <a href="${esc(COPY.rulesHref || "/methodology#pond")}">how the pond works</a>.</p></div>`;
 
     // the bell panel (a missed draw, rare) goes after the desk: on a phone it would push CHIP IN below the first screen
     host.innerHTML = tickerHtml + board + `<div class="cols"><div>${desk}${ref}</div><div>${lead}</div></div>` + bell + hist + rules;
@@ -723,10 +723,10 @@
     if (act === "disconnect") return disconnect();
     if (act === "wallet") { const wl = S.pickWallet && S.pickWallet[Number(b.dataset.i)]; if (wl) connect(wl).catch((err) => toast(humanError(err), false)); return; }
     if (act === "chip") {
-      if (S.closesAt && Math.floor(Date.now() / 1000) - S.skew >= S.closesAt) { refresh(); return toast("closed — the next pool opens at the bell", false); }
+      if (S.closesAt && Math.floor(Date.now() / 1000) - S.skew >= S.closesAt) { refresh(); return toast("croaked — the next pond opens at the croak", false); }
       const v = parseAmount(amt() && amt().value);
       if (v == null || v <= 0n) return toast(`type an amount of ${SYM}, like 1,000 or 2.5k`, false);
-      if (v < terms().minDeposit) return toast(`the minimum today is ${fmtExact(terms().minDeposit)} ${SYM}`, false);
+      if (v < terms().minDeposit) return toast(`the minimum toss today is ${fmtExact(terms().minDeposit)} ${SYM}`, false);
       if (v > S.balance) return toast("that is more than you have", false);
       return chipIn(v);
     }
@@ -741,7 +741,7 @@
   function page(mount) {
     host = mount;
     if (!CFG.pool || !/^0x[0-9a-fA-F]{40}$/.test(CFG.pool)) {
-      host.innerHTML = `<div class="cab"><div class="scr"><div class="lab">${esc(CFG.name || "THE POOL")}</div><div>has not opened yet. When it does, this page is where it happens.</div></div></div>`;
+      host.innerHTML = `<div class="cab"><div class="scr"><div class="lab">${esc(CFG.name || "THE POND")}</div><div>has not opened yet. When it does, this page is where it happens.</div></div></div>`;
       return;
     }
     if (!RPCS.length || !CFG.token) { host.innerHTML = `<div class="cab"><div class="scr err">the page is not configured (rpc / token)</div></div>`; return; }

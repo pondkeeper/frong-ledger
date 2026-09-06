@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>(function(){var p=location.pathname;if(/\.html$/.test(p)){history.replaceState(null,"",p.replace(/\.html$/,"").replace(/\/index$/,"/")+location.search+location.hash)}})();</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Frong Pond</title>
+<meta name="description" content="One FRONG pond a day. Toss a frong in before the 4 PM New York croak: one player takes the pond, one gets their frongs back. The number is drand's public beacon, checked by the contract itself.">
+<meta property="og:title" content="The Frong Pond — one jackpot a day">
+<meta property="og:description" content="Toss a frong in the pond before the 4 PM New York croak. One takes the pond, one gets their frongs back. Drawn by drand, verified on-chain.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://frong.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
+<meta name="theme-color" content="#070a06">
+<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="pool.css?v=2">
+</head>
+<body data-light>
+
+<div class="sitehead">
+  <div class="inner">
+    <span class="wordmark">🐸 <a href="/" style="color:inherit">Frong Ledger</a></span>
+    <span class="livechip"><span class="livedot" id="livedot"></span><span id="liveprice">—</span></span>
+    <span id="tipline" hidden><button id="tipbtn" class="tipbtn">🪰 <span
+      class="tip-verbose">toss a fly to the pondkeeper</span><span class="tip-brief">tip the frog</span></button></span>
+  </div>
+</div>
+
+<div class="wrap">
+  <nav class="tabbar pool-tabbar" aria-label="Views">
+    <a class="tabbtn" href="/#signal">📡 The Signal</a>
+    <a class="tabbtn" href="/#scanner">🔍 Scan your wallet</a>
+    <a class="tabbtn" href="/#flywheel">🔄 Flywheel</a>
+    <a class="tablink" href="/ledger">📒 The Ledger ↗</a>
+    <a class="tablink" href="/memes">🐸 Meme pond ↗</a>
+    <span class="tablink on" aria-current="page">🎰 The Pond</span>
+  </nav>
+
+  <div class="pagehead pool-head">
+    <h1>The Frong <span class="dim">Pond</span></h1>
+    <p class="tagline">ONE JACKPOT A DAY · DRAWN BY DRAND · THE 4 PM NEW YORK CROAK</p>
+  </div>
+
+  <div id="pool-host" class="op"></div>
+
+  <footer>
+    <div class="cols">
+      <span>The number is drand's public beacon, checked by the contract itself — nobody can pick or delay it.</span>
+      <span><a href="/methodology#pond">How the pond works</a></span>
+      <span id="pool-tg" hidden><a href="#" rel="noopener" target="_blank">the FRONG chat ↗</a></span>
+      <span><a href="https://github.com/pondkeeper/frong-ledger" rel="noopener">open source ↗</a></span>
+    </div>
+    <p>Not financial advice. A toss is final. 🐸</p>
+  </footer>
+</div>
+
+<dialog id="tipjar" class="tipjar" aria-labelledby="tipjar-title">
+  <div class="tj-head">
+    <span class="tj-frog" aria-hidden="true">🐸</span>
+    <h2 id="tipjar-title">Toss a fly in the pond</h2>
+    <button id="tipclose" class="tj-close" aria-label="Close">✕</button>
+  </div>
+  <p>The Frong Ledger is free and open-source. No ads, no paywall, no token to sell you —
+    and that never changes.</p>
+  <p>If the pond has been useful and you feel like it, you can toss the pondkeeper a fly.
+    Tips go toward keeping the tracker fed and running, and building new free tools for the
+    FRONG community. Completely optional: tipping unlocks nothing, and skipping it costs you
+    nothing. The frog loves you either way.</p>
+  <div class="tj-addr mono" id="tipaddr"></div>
+  <div class="tj-actions">
+    <button id="tipcopy" class="tj-copy">copy address</button>
+    <a id="tipexplore" href="#" rel="noopener" target="_blank">watch the tip jar on-chain ↗</a>
+  </div>
+  <p class="tj-fine">ETH or FRONG on Robinhood Chain. Every fly lands in a public wallet —
+    audit it like everything else here.</p>
+</dialog>
+
+<div class="op-toast mono" id="op-toast" role="status" aria-live="polite"></div>
+
+<script src="pool-config.js?v=3"></script>
+<script src="app.js?v=23"></script>
+<script src="pool.js?v=7"></script>
+<script>window.__POOL && window.__POOL.page(document.getElementById("pool-host"));</script>
+</body>
+</html>

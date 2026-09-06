@@ -7,7 +7,7 @@ window.POOL_CFG = {
   token: "0x6245e67affA44a23077f0Ea7f981a8DC743a0c47",        // FRONG (verified: symbol FRONG, 18 decimals, supply 1e27)
   symbol: "FRONG",
   decimals: 18,                                               // asserted against decimals() on the chain; a mismatch disables the desk
-  name: "The Frong Pool",
+  name: "The Frong Pond",
   chainHex: "0x1237", chainName: "Robinhood Chain",           // 4663
   rpc: ["https://rpc.mainnet.chain.robinhood.com", "https://robinhood-rpc.publicnode.com"],
   explorer: "https://robinhoodchain.blockscout.com",
@@ -20,7 +20,7 @@ window.POOL_CFG = {
   price: () => (typeof S === "object" && S && S.livePrice) || null,
   copy: {
     connect: "CONNECT WALLET",
-    post: "i'm in the frong pool: {jackpot} FRONG jackpot today. one takes it, one gets their money back. chip in before the 4 PM New York bell.\n\n{link}",
-    rulesHref: "/methodology#pool",
+    post: "i tossed a frong in the pond: {jackpot} FRONG pond today. one takes it, one gets their frongs back. toss before the 4 PM New York croak.\n\n{link}",
+    rulesHref: "/methodology#pond",
   },
 };

@@ -161,7 +161,8 @@ async function open(label, width, height, fx, cfgPatch, opts = {}) {
   });
   // the ledger's live price (app.js, light mode): a fixed $0.0084 so the ≈USD line is deterministic
   await page.route(/api\.dexscreener\.com/, (route) => route.fulfill({ body: JSON.stringify({ pairs: [{ priceUsd: '0.0084', priceNative: '0.0000034', priceChange: { h24: 1.5 }, liquidity: { usd: 1000000 }, volume: { h24: 2000000 } }] }), contentType: 'application/json' }));
-  await page.goto(`http://localhost:${PORT}/pool.html${opts.query || ''}`, { waitUntil: 'networkidle' });
+  await page.route('**/pond?*', async (route) => { const r = await fetch(`http://localhost:${PORT}/pond.html`); route.fulfill({ body: await r.text(), contentType: 'text/html' }); }); // the python server has no extensionless routing; Pages does
+  await page.goto(`http://localhost:${PORT}/${opts.old ? 'pool.html' : 'pond.html'}${opts.query || ''}`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1500);
   const text = async () => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
   return { page, errors, unknown, text };
@@ -175,21 +176,21 @@ try {
     const t = await text();
     if (unknown.length) console.log('   unknown selectors:', unknown.slice(0, 3).join(' | '));
     ok('no page errors', errors.length === 0, errors.join(' | ').slice(0, 300));
-    if (errors.length || !/TODAY'S JACKPOT/.test(t)) console.log('TEXT:', t.slice(0, 700));
-    ok("the board shows today's jackpot in FRONG", /TODAY'S JACKPOT 294k FRONG/.test(t), (t.match(/TODAY'S JACKPOT [^·]*/) || [''])[0]);
+    if (errors.length || !/TODAY'S POND/.test(t)) console.log('TEXT:', t.slice(0, 700));
+    ok("the board shows today's pond in FRONG", /TODAY'S POND 294k FRONG/.test(t), (t.match(/TODAY'S POND [^·]*/) || [''])[0]);
     ok('the ≈USD line comes from the price hook (294k × $0.0084)', /≈ \$2,470/.test(t), (t.match(/≈ \$[0-9,]+/) || ['(none)'])[0]);
-    ok('one line under the jackpot says what the game is, and the page never mentions the house cut', /chip in FRONG before the \d+:\d\d [AP]M New York bell · one takes the jackpot, one gets their money back/.test(t) && !/house/i.test(t.replace(/HOUSE RULES/, '')), (t.match(/chip in FRONG before[^·]*·[^·]*/) || [''])[0]);
+    ok('one line under the jackpot says what the game is, and the page never mentions the house cut', /toss a frong in before the \d+:\d\d [AP]M New York croak · one takes the pond, one gets their frongs back/.test(t) && !/house/i.test(t.replace(/HOUSE RULES/, '')), (t.match(/toss a frong in before[^·]*·[^·]*/) || [''])[0]);
     ok('arriving with a REGISTERED ?ref= shows the sender before connecting', /sent by alice/.test(t), (t.match(/sent by [^ ]*/) || ['(none)'])[0]);
     ok('the seed and the players are on the board', /3 players · 390k in · 50k seeded/.test(t));
-    ok('the countdown runs', /CLOSES IN 3:1\d:\d\d/.test(t), (t.match(/CLOSES IN [0-9:]+/) || [''])[0]);
-    ok('the bell is offered for the due round, named by its day', /a pool \(Sep \d+, [^)]*\) is waiting for its draw/.test(t) && /RING THE BELL/.test(t), (t.match(/THE BELL [^.]*\./) || [''])[0]);
-    ok("the results banner: jackpot first, money back second, from today's draw", /🔔 today: jackpot 160k → 0x0000…0ffe · money back 100k → 0x2222…2222/.test(t), (t.match(/🔔[^C]{0,120}/) || [''])[0]);
+    ok('the countdown runs', /CROAKS IN 3:1\d:\d\d/.test(t), (t.match(/CROAKS IN [0-9:]+/) || [''])[0]);
+    ok('the bell is offered for the due round, named by its day', /a pond \(Sep \d+, [^)]*\) is waiting for its draw/.test(t) && /MAKE IT CROAK/.test(t), (t.match(/THE CROAK [^.]*\./) || [''])[0]);
+    ok("the results banner: jackpot first, money back second, from today's draw", /🔔 today: pond 160k → 0x0000…0ffe · frongs back 100k → 0x2222…2222/.test(t), (t.match(/🔔[^C]{0,120}/) || [''])[0]);
     ok('no wallet: the desk offers CONNECT WALLET', /CONNECT WALLET/.test(t) && !/CHIP IN\b.*balance/.test(t));
     ok('the leaderboard ranks by deposit with dividends earned, no broker column', /1\. 0x1111…1111 250k · earned 41\.3k/.test(t) && !/brokers/.test(t), (t.match(/1\. [^2]*/) || [''])[0].slice(0, 80));
-    ok('the feed shows the last deposits newest first', /JUST NOW 0x1111…1111 chipped in 150k 5m ago/.test(t));
-    ok('past pools: jackpot headlined, money back second, beacon link', /· 4 players jackpot 160k → 0x0000…0ffe money back 100k → 0x2222…2222 beacon 31921200/.test(t), (t.match(/PAST POOLS.{0,140}/) || [''])[0]);
-    ok('past pools: the due round says it is waiting', /waiting for its draw/.test(t));
-    ok('the rules quote the live terms and the minimum, with no boost line', /at least 500 a time/.test(t) && /25%.*everyone already in that day/.test(t) && !/boost/.test(t), (t.match(/HOUSE RULES.{0,120}/) || [''])[0]);
+    ok('the feed shows the last deposits newest first', /JUST NOW 0x1111…1111 tossed 150k 5m ago/.test(t));
+    ok('past pools: jackpot headlined, money back second, beacon link', /· 4 players pond 160k → 0x0000…0ffe frongs back 100k → 0x2222…2222 beacon 31921200/.test(t), (t.match(/PAST PONDS.{0,140}/) || [''])[0]);
+    ok('past ponds: the due round says it is waiting', /waiting for its croak/.test(t));
+    ok('the rules quote the live terms and the minimum, with no boost line', /at least 500 a toss/.test(t) && /25%.*everyone already in that day/.test(t) && !/boost/.test(t), (t.match(/HOUSE RULES.{0,120}/) || [''])[0]);
     ok('the beacon link goes to api.drand.sh', (await page.$eval('.hist a[href*="drand"]', (a) => a.href)) === 'https://api.drand.sh/v2/beacons/quicknet/rounds/31921200');
     ok('RING THE BELL is disabled until a wallet is connected', await page.$eval('[data-act=bell]', (b) => b.disabled));
     ok('the winners tape shows once a pool has been drawn', !!(await page.$('.op-ticker')));
@@ -206,12 +207,12 @@ try {
     const toastNow = await page.evaluate(() => document.getElementById('op-toast').textContent);
     ok('connected: the "opening your wallet…" toast is replaced by "connected · 0x…"', /^connected · 0x0000…0ffe$/.test(toastNow), toastNow);
     ok('connected: the desk shows the balance and the wallet', /balance 100k FRONG · 0x0000…0ffe · sent by alice/.test(t2), (t2.match(/balance [^·]*· 0x[^ ]* · [^ ]* [^ ]*/) || [''])[0]);
-    ok('connected: YOU took the jackpot in the banner, and a CLAIM for the dividends', /YOU took the jackpot: 160k FRONG/.test(t2) && /you have 4,200 in dividends to claim/.test(t2), (t2.match(/YOU took[^·]*/) || [''])[0]);
+    ok('connected: YOU took the jackpot in the banner, and a CLAIM for the dividends', /YOU took the pond: 160k FRONG/.test(t2) && /you have 4,200 in dividends to claim/.test(t2), (t2.match(/YOU took[^·]*/) || [''])[0]);
     ok('connected: a known link code needs no sender field', !(await page.$('#op-ref')));
     ok('connected: dividends to claim are shown with a live CLAIM', /dividends 4,200/.test(t2) && await page.$eval('[data-act=claimdiv]', (b) => !b.disabled));
     ok('connected: the link shows with COPY, POST ON X and SHARE ON TELEGRAM', /YOUR LINK/.test(t2) && /\?ref=mockname/.test(t2) && /POST ON X/.test(t2) && /SHARE ON TELEGRAM/.test(t2));
     const xHref = await page.$eval('.ref a[href*="x.com"]', (a) => decodeURIComponent(a.href));
-    ok('the X post carries the jackpot and the clean page link', /294k FRONG jackpot/.test(xHref) && /\/pool\?ref=mockname/.test(xHref) && !/pool\.html/.test(xHref), xHref.slice(0, 160));
+    ok('the X post carries the jackpot and the clean page link', /294k FRONG pond/.test(xHref) && /\/pond\?ref=mockname/.test(xHref) && !/\.html/.test(xHref), xHref.slice(0, 160));
     ok('connected: the bell button is live', await page.$eval('[data-act=bell]', (b) => !b.disabled));
     ok('the presets are the config\'s, in whole tokens', (await page.$$eval('.presets .chip', (bs) => bs.map((b) => b.textContent).join('|'))) === 'MIN|1k|2.5k|5k|10k|25k|MAX');
     await page.locator('[data-act=min]').click();
@@ -284,7 +285,7 @@ try {
     const sw = await page.evaluate(() => document.documentElement.scrollWidth);
     ok('phone 390px: no sideways overflow', sw <= 390, `scrollWidth ${sw}`);
     ok('phone: no page errors', errors.length === 0, errors.join(' | ').slice(0, 200));
-    ok('phone still shows the jackpot and the desk', /TODAY'S JACKPOT/.test(t) && /CONNECT WALLET/.test(t));
+    ok('phone still shows the pond and the desk', /TODAY'S POND/.test(t) && /CONNECT WALLET/.test(t));
     ok('an unregistered ?ref= is called out, not shown as a sender', /link code 'alicee' is not registered/.test(t) && !/sent by alicee/.test(t), (t.match(/link code[^·]*·[^.]*/) || ['(none)'])[0]);
     ok('phone: CONNECT WALLET sits inside the first screen with room', (await page.$eval('[data-act=connect]', (b) => b.getBoundingClientRect().bottom)) < 844 - 40, 'bottom ' + (await page.$eval('[data-act=connect]', (b) => Math.round(b.getBoundingClientRect().bottom))));
     await page.screenshot({ path: shot('pool-phone-844.png'), clip: { x: 0, y: 0, width: 390, height: 844 } });
@@ -297,7 +298,7 @@ try {
     const { page, errors, text } = await open('six', 1280, 900, fx6, { decimals: 6, symbol: 'USDX' });
     const t = await text();
     ok('6 decimals: no page errors', errors.length === 0, errors.join(' | ').slice(0, 200));
-    ok('6 decimals: the jackpot and the minimum read the same', /TODAY'S JACKPOT 294k USDX/.test(t) && /at least 500 a time/.test(t), (t.match(/TODAY'S JACKPOT [^·]*/) || [''])[0]);
+    ok('6 decimals: the jackpot and the minimum read the same', /TODAY'S POND 294k USDX/.test(t) && /at least 500 a toss/.test(t), (t.match(/TODAY'S POND [^·]*/) || [''])[0]);
     await page.locator('[data-act=connect]').click();
     await page.waitForTimeout(2000);
     await page.locator('[data-act=min]').click();
@@ -329,23 +330,23 @@ try {
     await page.goto(`http://localhost:${PORT}/${file}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
     ok(`${file}: no page errors`, errors.length === 0, errors.join(' | ').slice(0, 200));
-    ok(`${file}: the nav has a POOL tab linking to pool.html`, (await page.$eval('.tabbar a[href="/pool"]', (a) => a.textContent.trim())) === '🎰 The Pool ↗');
+    ok(`${file}: the nav has a POOL tab linking to pool.html`, (await page.$eval('.tabbar a[href="/pond"]', (a) => a.textContent.trim())) === '🎰 The Pond ↗');
     const htmlHrefs = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')).filter((h) => /\.html/.test(h) && !/^https?:/.test(h)));
     ok(`${file}: no internal link carries .html`, htmlHrefs.length === 0, htmlHrefs.join(' '));
     if (file === 'index.html') {
       const jp = await page.$eval('#herojackpot', (a) => ({ hidden: a.hidden, text: a.innerText.replace(/\s+/g, ' '), href: a.getAttribute('href') }));
-      ok('index hero: the live jackpot line reads the open pot from the chain', !jp.hidden && /Today's jackpot: 294k FRONG · chip in before the 4 PM NY bell/i.test(jp.text) && jp.href === '/pool', jp.text);
+      ok('index hero: the live jackpot line reads the open pot from the chain', !jp.hidden && /Today's pond: 294k FRONG · toss a frong in before the 4 PM NY croak/i.test(jp.text) && jp.href === '/pond', jp.text);
       await page.screenshot({ path: shot('index-hero.png'), clip: { x: 0, y: 0, width: 1280, height: 900 } });
     }
     await page.close();
   }
   // ---------------------------------------------------------------- an old .html link: the address bar is cleaned, the ref survives
   {
-    const { page } = await open('clean', 1000, 700, fx, {}, { query: '?ref=abc' });
+    const { page } = await open('clean', 1000, 700, fx, {}, { query: '?ref=abc', old: true });
     const loc = await page.evaluate(() => ({ p: location.pathname, s: location.search }));
-    ok('arriving at /pool.html?ref=abc leaves the address bar at /pool?ref=abc (no reload)', loc.p === '/pool' && loc.s === '?ref=abc', JSON.stringify(loc));
+    ok('arriving at the old /pool.html?ref=abc lands on /pond?ref=abc with the ref intact', loc.p === '/pond' && loc.s === '?ref=abc', JSON.stringify(loc));
     const htmlHrefs = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')).filter((h) => /\.html/.test(h) && !/^https?:/.test(h)));
-    ok('pool page: no internal link carries .html', htmlHrefs.length === 0, htmlHrefs.join(' '));
+    ok('pond page: no internal link carries .html', htmlHrefs.length === 0, htmlHrefs.join(' '));
     await page.close();
   }
   // ---------------------------------------------------------------- the inert state: no pool in config
