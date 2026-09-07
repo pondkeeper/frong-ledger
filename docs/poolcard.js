@@ -269,7 +269,14 @@
     try { cv.toBlob(res, "image/png"); }
     catch (e) { state.pfp = null; draw(cv, state); try { cv.toBlob(res, "image/png"); } catch (e2) { res(null); } }
   });
-  const isTouch = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
+  /// a PHONE (or tablet), not merely a touch screen: a Windows laptop with a
+  /// touch screen reports maxTouchPoints 10 and has navigator.share, and its
+  /// share sheet lists Mail and friends — a tester got "email options" instead
+  /// of X. Phones say so in the UA; iPadOS hides as a Mac but has a coarse
+  /// pointer with no hover, which a mouse-driven laptop never has.
+  const mq = (q) => { try { return window.matchMedia(q).matches; } catch (e) { return false; } };
+  const isPhone = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && mq("(pointer: coarse)") && mq("(hover: none)"));
+  const isTouch = isPhone;
   const fonts = () => Promise.all([document.fonts.load("20px 'Press Start 2P'"), document.fonts.load("20px 'VT323'")]).catch(() => {});
 
   /// d: { branch, house, symbol, slug, mark (url), branchObj, code, link, pot (formatted), bell ("4:00 PM"), date, inToday, postText }
@@ -308,28 +315,59 @@
       clearTimeout(t); t = setTimeout(() => loadPfp(state.handle).then((img) => { if (img) { state.pfp = img; paint(); } }), 500);
     });
     modal.querySelector(".pc-copy").addEventListener("click", () => { if (navigator.clipboard) navigator.clipboard.writeText(state.link).then(() => { hint.textContent = "link copied"; }); });
+    /// desktop: a download link (in the document — some browsers ignore a detached one)
+    const downloadLink = (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = file(); a.rel = "noopener"; a.style.display = "none";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    };
+    /// phones: wallet in-app browsers and iOS ignore a[download] (nothing happens —
+    /// the tester's report). Offer the share sheet with the file when the browser
+    /// has one (Save Image is on it); otherwise swap the canvas for an <img> of the
+    /// PNG, which every phone browser saves on a long press.
+    const showForLongPress = (blob) => {
+      const holder = modal.querySelector(".pc-card"); if (!holder) return;
+      let img = holder.querySelector("img.pc-img");
+      if (!img) { img = document.createElement("img"); img.className = "pc-img"; img.alt = "your card"; holder.appendChild(img); }
+      img.src = URL.createObjectURL(blob);
+      canvas.hidden = true;
+      hint.innerHTML = "<b>press and hold the card</b>, then <b>Save Image</b> (Add to Photos).";
+    };
+    const saveOnPhone = async (blob) => {
+      const f = new File([blob], file(), { type: "image/png" });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [f] })) {
+        try { await navigator.share({ files: [f] }); hint.textContent = "saved? pick Save Image on the sheet if not."; return true; }
+        catch (e) { if (e && e.name === "AbortError") return true; /* no files on this sheet: fall through */ }
+      }
+      showForLongPress(blob);
+      return false;
+    };
     modal.querySelector(".pc-dl").addEventListener("click", async () => {
       const blob = await cardBlob(); if (!blob) return;
-      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file(); a.click();
+      if (isPhone()) await saveOnPhone(blob); else downloadLink(blob);
     });
     modal.querySelector(".pc-share").addEventListener("click", () => {
       const blobP = cardBlob();
       const intent = "https://x.com/intent/post?text=" + encodeURIComponent(state.postText);
       const fallbackDownload = (blob) => {
         if (!blob) return;
-        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file(); a.click();
+        downloadLink(blob);
         hint.innerHTML = "your card just <b>downloaded</b> — attach it to the post with the image button, then post.";
       };
-      if (isTouch() && navigator.share) {
+      if (isPhone()) {
+        // second tap after the card was shown for saving: straight to X (synchronous, no popup block)
+        if (state.savedForPost) { window.open(intent, "_blank", "noopener"); return; }
         (async () => {
           const blob = await blobP;
           const f = blob && new File([blob], file(), { type: "image/png" });
-          if (f && navigator.canShare && navigator.canShare({ files: [f] })) {
+          if (f && navigator.share && navigator.canShare && navigator.canShare({ files: [f] })) {
             try { await navigator.share({ text: state.postText, files: [f] }); hint.textContent = "posted? your link is in it — 5% of every chip-in from whoever arrives is yours."; return; }
-            catch (e) { /* sheet dismissed */ }
+            catch (e) { if (e && e.name === "AbortError") return; /* sheet dismissed */ }
           }
-          fallbackDownload(blob);
-          window.open(intent, "_blank", "noopener");
+          // no share sheet with files (wallet browsers): show the card to save, X on the next tap
+          if (blob) { showForLongPress(blob); state.savedForPost = true; hint.innerHTML = "<b>press and hold the card</b> to save it, then tap <b>POST ON X</b> again and attach it."; }
+          else window.open(intent, "_blank", "noopener");
         })();
         return;
       }
@@ -341,5 +379,5 @@
     });
   }
 
-  window.__POOL_CARD = { open, drawCard, drawWinner, pixelPfp, loadPfp };
+  window.__POOL_CARD = { open, drawCard, drawWinner, pixelPfp, loadPfp, isPhone };
 })();

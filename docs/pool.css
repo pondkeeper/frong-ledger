@@ -165,6 +165,7 @@
 .pc-row .dim{color:var(--muted);white-space:nowrap}
 .pc-row input{flex:1;height:38px;padding:0 10px;background:var(--page);border:1px solid var(--baseline);border-radius:3px;color:var(--ink);font:inherit;font-size:14px}
 .pc-card canvas{width:100%;height:auto;display:block;border:1px solid var(--border);border-radius:4px}
+.pc-card img.pc-img{width:100%;height:auto;display:block;border:1px solid var(--border);border-radius:4px;-webkit-touch-callout:default}
 .pc-post{margin:10px 0}
 .pc-post .dim{color:var(--muted)}
 .pc-text{white-space:pre-wrap;background:var(--page);border:1px solid var(--baseline);border-radius:3px;padding:8px 10px;color:var(--ink);font-size:12.5px;line-height:1.45}
