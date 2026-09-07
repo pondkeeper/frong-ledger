@@ -343,6 +343,18 @@ try {
     await page.close();
     fx.fresh = false; fx.nocode = false;
   }
+  // ---------------------------------------------------------------- #link (the Firm hall's GET MY LINK key opens pond#link)
+  {
+    const { page, text } = await open('link', 1280, 700, fx, {}, { query: '#link' });
+    await page.waitForTimeout(500);
+    const connectY = await page.$eval('[data-act=connect]', (b) => b.getBoundingClientRect().top);
+    ok('#link without a wallet: the page lands on CONNECT WALLET (inside the viewport)', connectY >= 0 && connectY <= 700, 'top ' + Math.round(connectY));
+    await page.locator('[data-act=connect]').click();
+    await page.waitForTimeout(2800);
+    const box = await page.$eval('#link', (n) => { const r = n.getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), text: n.textContent.replace(/\s+/g, ' ').slice(0, 40) }; });
+    ok('#link connected: the YOUR LINK box has id=link and is scrolled into the viewport', /YOUR LINK/.test(box.text) && box.top < 700 && box.bottom > 0, JSON.stringify(box));
+    await page.close();
+  }
   // ---------------------------------------------------------------- phone 390×844
   {
     const { page, errors, text } = await open('phone', 390, 844, fx, {}, { query: '?ref=alicee' });

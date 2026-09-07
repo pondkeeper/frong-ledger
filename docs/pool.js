@@ -773,7 +773,7 @@
     const desk = `<div class="cab"><div class="scr"><div class="lab">TOSS IN</div><div class="desk">${deskBody}</div></div></div>`;
 
     const nn = nameNote(String(keep.code || "").trim().toLowerCase(), S.nameCheck);
-    const ref = S.account && !S.fatal ? `<div class="cab ref"><div class="scr"><div class="lab">${S.code ? "YOUR LINK" : "GET MY LINK"}</div>
+    const ref = S.account && !S.fatal ? `<div class="cab ref" id="link"><div class="scr"><div class="lab">${S.code ? "YOUR LINK" : "GET MY LINK"}</div>
       ${S.code ? `<div class="link"><code class="lnk">${esc(refLink(S.code))}</code><button class="chip" data-act="copy" type="button">COPY LINK</button></div>
       <div class="link"><span class="dim">code</span><code class="big">${esc(S.code)}</code><button class="chip" data-act="copycode" type="button">COPY CODE</button></div>
       <div class="share">${window.__POOL_CARD ? `<button class="go" data-act="card" type="button">MAKE MY CARD · POST ON X</button>` : `<a class="chip" href="${xIntent(S.code)}" target="_blank" rel="noopener">POST ON X</a>`}<a class="chip" href="${tgIntent(S.code)}" target="_blank" rel="noopener">SHARE ON TELEGRAM</a></div>
@@ -809,6 +809,10 @@
     // the bell panel (a missed draw, rare) goes after the desk: on a phone it would push CHIP IN below the first screen
     host.innerHTML = tickerHtml + board + `<div class="cols"><div>${desk}${ref}</div><div>${lead}</div></div>` + bell + hist + rules;
     countUp(host.querySelector(".board .pot"));
+    if (S.wantLink) {
+      const box = host.querySelector("#link") || host.querySelector("[data-act=connect]");
+      if (box) { S.wantLink = !host.querySelector("#link"); box.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    }
     S.seenDeposits = S.count;
     const a = host.querySelector("#op-amt"), c = host.querySelector("#op-code"), rf = host.querySelector("#op-ref");
     if (a && keep.amt) a.value = keep.amt;
@@ -886,6 +890,8 @@
     try { const c = new URL(location.href).searchParams.get("ref"); if (c && validCode(c.toLowerCase())) localStorage.setItem(REF_KEY, c.toLowerCase()); } catch (e) {}
     host.addEventListener("click", onClick);
     host.addEventListener("input", onInput);
+    // the counter's GET MY LINK key arrives at #link: land on the link box once it exists (it needs a wallet), after the first paint
+    if (location.hash === "#link") { S.wantLink = true; }
     render();
     refresh();
     clearInterval(ticker);
