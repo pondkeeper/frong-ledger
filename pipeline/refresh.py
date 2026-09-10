@@ -76,8 +76,14 @@ def get(url, tries=3):
             return None
         try:
             # Blockscout answers 403 to non-browser User-Agents since 2026-08-28 (every cron run failed
-            # from then on); a browser UA gets 200 on the same URLs
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36", "Accept": "application/json"})
+            # from then on); a browser UA gets 200 on the same URLs. Since 2026-09-08 the UA alone is
+            # 403 too (every run failed again): the request has to look like the explorer's own page
+            # asking — Accept-Language, Origin and Referer as well (verified 200 vs 403, 2026-09-10).
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                "Accept": "application/json, text/plain, */*", "Accept-Language": "en-US,en;q=0.9",
+                "Origin": "https://robinhoodchain.blockscout.com", "Referer": "https://robinhoodchain.blockscout.com/",
+            })
             with urllib.request.urlopen(req, timeout=15) as r:
                 return json.load(r)
         except Exception as e:
