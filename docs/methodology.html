@@ -93,25 +93,9 @@
     the same transaction, adding to the pot the meter hasn't seen yet.</p>
 
   <h2 id="pond">The Frong Pond</h2>
-  <p>One pond a day in FRONG, on <a href="/pond">the pond page</a>. Toss a frong in any time before the
-    4 PM New York croak (500 FRONG minimum a toss). Of each toss, <b>25%</b> is paid out on
-    the spot to everyone already in that day, pro-rata to what they put in (your own earlier
-    chip-ins included), <b>5%</b> to whoever sent you (or to the pond if nobody did),
-    <b>10% to the house</b>, and the remaining <b>60%</b> goes to the pond. At the croak one
-    player gets their frongs back (up to the pond) and another takes what is left. Your chance is
-    what you tossed in, nothing else. A toss is final; there are no withdrawals.</p>
-  <p>The number is <a href="https://drand.love" rel="noopener">drand</a>'s quicknet beacon for a
-    round fixed the moment the pond opens (five minutes after the croak), and the contract checks the
-    beacon's BLS signature itself on-chain; nobody — not the pondkeeper, not the keeper bot, not the
-    sequencer — can pick or delay it. Every past pond links its beacon on the page so anyone can
-    re-check the number at api.drand.sh. Making it croak is permissionless; the keeper is a
-    convenience. If the beacon were ever unavailable for a week, the round is abandoned and every
-    toss of that day is refundable pro-rata.</p>
-  <p>Terms are read live from the contract on the pond page (the house share is capped at 10% in
-    the code; the pond's share can never go below 50%). The owner cannot take FRONG out of the pond:
-    there is no rescue path for the pool token, by design. Sponsors who want to seed a pond send
-    FRONG to the pond's seed box, never to the contract itself, and anyone may then pull it into the open
-    pond. The contract is the same audited code as Firm Brokers' Office Pool on Robinhood Chain.</p>
+  <p>The daily FRONG pond lives on Firm Brokers' site now:
+    <a href="https://thefirmbrokers.com/pool/frong" rel="noopener">thefirmbrokers.com/pool/frong</a>.
+    Same contract, same rules, same links and codes; this site no longer carries it.</p>
 
   <h2>Known limitations</h2>
   <ul>

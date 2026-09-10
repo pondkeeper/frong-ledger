@@ -811,35 +811,6 @@ function renderBurn() {
       label: 'Cumulative FRONG burned' });
 }
 
-/* ---------------- the pool's jackpot, for the hero (index.html) ----------------
-   pool-config.js names the pool; nothing here is address-shaped. currentRound()
-   then roundView(id): the open pot, or "opens with the first chip-in". */
-async function pollJackpot() {
-  const el = $('herojackpot'), cfg = window.POOL_CFG;
-  if (!el || !cfg || !/^0x[0-9a-fA-F]{40}$/.test(cfg.pool || '')) return;
-  try {
-    const call = async (data) => {
-      const r = await fetch(RPC, { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: cfg.pool, data }, 'latest'] }) });
-      const j = await r.json(); if (!j.result || j.result.length < 66) throw new Error('no result'); return j.result;
-    };
-    const cr = await call('0x8a19c8bc'); // currentRound(): id, closesAt, open, nowTs
-    const id = BigInt('0x' + cr.slice(2, 66)), open = BigInt('0x' + cr.slice(130, 194)) === 1n;
-    let line = 'THE FRONG POND — TOSS A FRONG, ONE TAKES THE POND';
-    if (open) {
-      const rv = await call('0xdb5b4737' + id.toString(16).padStart(64, '0')); // roundView(id): pot is word 6
-      const pot = BigInt('0x' + rv.slice(2 + 6 * 64, 2 + 7 * 64));
-      const dec = BigInt(cfg.decimals == null ? 18 : cfg.decimals);
-      const n = Number(pot / 10n ** (dec > 3n ? dec - 3n : 0n)) / (dec > 3n ? 1000 : Number(10n ** dec));
-      const t = (x, d) => x.toLocaleString('en-US', { maximumFractionDigits: d });
-      const amt = (n >= 1e12 ? t(n / 1e12, 2) + 'T' : n >= 1e9 ? t(n / 1e9, 2) + 'B' : n >= 1e6 ? t(n / 1e6, 2) + 'M' : n >= 1e4 ? t(n / 1e3, 1) + 'k' : t(n, 0)) + ' ' + (cfg.symbol || '');
-      line = `TODAY'S POND: ${amt} — TOSS A FRONG BEFORE THE 4 PM NY CROAK`;
-      el.classList.add('live');
-    }
-    el.querySelector('[data-jp]').textContent = line;
-  } catch (e) { /* the link stays, the number waits for the next poll */ }
-}
-
 /* ---------------- burn meter ---------------- */
 /* Queued creator fees, read live off all three stages of the burn pipeline.
    Falls back to the cron baseline so the meter still renders if the RPC is down. */
@@ -1145,10 +1116,9 @@ async function boot() {
   $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at);
 
   renderBurnMeter();
-  pollPrice(); pollPot(); pollJackpot();
+  pollPrice(); pollPot();
   setInterval(pollPrice, 30000);
   setInterval(pollPot, 30000);
-  setInterval(pollJackpot, 30000);
   setInterval(() => { $('gen').textContent = 'baseline refreshed ' + fmtAgo(S.data.generated_at); }, 30000);
   let rt;
   window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderCharts, 200); });
